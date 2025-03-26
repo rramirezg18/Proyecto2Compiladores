@@ -1,0 +1,14 @@
+program{
+    main(){
+        int x = 10;
+        int y = 20;
+        int z = x + y * 2;
+        if(z > 30){
+            int w = z / 2;
+        }
+        else{
+            int w = z - 5;
+        }
+        print(w);
+    }
+}

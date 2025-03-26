@@ -1,0 +1,11 @@
+program{
+    main(){
+        int x = 4;
+        if(x < 5){
+            x = 3;
+        } else if(x > 5){
+            x = 2;
+        }
+        print(x);
+    }
+}
