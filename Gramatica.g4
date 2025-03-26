@@ -42,8 +42,8 @@ sentencia_for
     ;
 
 for_incremento_y_disminucion
-    : VARIABLE (MASMAS | MENOSMENOS)
-    | declaracion_y_asignacion
+    : VARIABLE (MASMAS | MENOSMENOS)//i++ i--
+    | declaracion_y_asignacion //i=i+2
     ;
 
 bloque
