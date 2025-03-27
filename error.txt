@@ -1,0 +1,6 @@
+program{
+    main(){
+        int x = "hola";
+        print(x);---esto no puede seeeeeeeeeeeeeeeeeeeeer
+    }
+}
