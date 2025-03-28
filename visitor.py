@@ -1,20 +1,36 @@
 from GramaticaVisitor import GramaticaVisitor
 from GramaticaParser import GramaticaParser
 
+
 class AnalizadorVisitor(GramaticaVisitor):
     def __init__(self):
-        self.env = {}  #almacena variables
+        self.env = {}  # Almacena variables
+        self.funciones = {}  # Almacena funciones (nombre -> (parámetros, bloque))
+
+    def visitGramatica(self, ctx: GramaticaParser.GramaticaContext):
+        # Registrar todas las funciones
+        for funcion in ctx.funcion():
+            self.visitFuncion(funcion)
+
+        print("Funciones registradas:", self.funciones)  # DEBUG
+
+        # Ejecutar las instrucciones principales
+        result = None
+        for instr in ctx.instruccion():  # Si `gramatica` tiene `instruccion()`
+            result = self.visit(instr)
+
+        return result
+
+
 
     def visitDeclaracion_y_asignacion(self, ctx: GramaticaParser.Declaracion_y_asignacionContext):
         var_name = ctx.VARIABLE().getText()
         value = self.visit(ctx.expr())
-        # cuando leva el tipo de dato incluido es declaracio
         if ctx.tipo() is not None:
             if var_name in self.env:
                 raise Exception(f"Variable {var_name} ya está declarada.")
             self.env[var_name] = value
         else:
-            # reasignación la variable debe haber sido declarada previamente
             if var_name not in self.env:
                 raise Exception(f"Variable {var_name} no está declarada.")
             self.env[var_name] = value
@@ -45,7 +61,6 @@ class AnalizadorVisitor(GramaticaVisitor):
         return None
 
     def visitSentencia_for(self, ctx: GramaticaParser.Sentencia_forContext):
-        # for (inicialización ; condición ; incremento) bloque
         self.visit(ctx.declaracion_y_asignacion())  # Inicialización
         while self.visit(ctx.expr()):
             self.visit(ctx.bloque())
@@ -53,7 +68,6 @@ class AnalizadorVisitor(GramaticaVisitor):
         return None
 
     def visitFor_incremento_y_disminucion(self, ctx: GramaticaParser.For_incremento_y_disminucionContext):
-        # MASMAS o MENOSMENOS o i = i + 2;
         if ctx.getChildCount() == 2:
             var_name = ctx.VARIABLE().getText()
             if ctx.MASMAS():
@@ -71,13 +85,19 @@ class AnalizadorVisitor(GramaticaVisitor):
         return None
 
     def visitBloque(self, ctx: GramaticaParser.BloqueContext):
-        result = None
         for instr in ctx.instruccion():
-            result = self.visit(instr)
-        return result
+            resultado = self.visit(instr)
+            if isinstance(resultado, tuple) and resultado[0] == "return":
+                return resultado[1]  # Devolver el valor de return si se encuentra
+        return None
+
+
 
     def visitExpr(self, ctx: GramaticaParser.ExprContext):
-        # Manejo del operador unario negativo
+        # Manejo de llamadas a funciones dentro de expresiones
+        if ctx.llamada_funcion():
+            return self.visit(ctx.llamada_funcion())
+
         if ctx.getChildCount() == 2 and ctx.getChild(0).getText() == '-':
             expr_value = self.visit(ctx.expr(0))
             return -expr_value if expr_value is not None else 0
@@ -128,4 +148,67 @@ class AnalizadorVisitor(GramaticaVisitor):
                 return left >= right
             else:
                 raise Exception("Operador desconocido: " + op)
+
         return self.visitChildren(ctx)
+
+    def visitFuncion(self, ctx: GramaticaParser.FuncionContext):
+        nombre_funcion = ctx.VARIABLE().getText()
+        parametros = self.visit(ctx.parametros()) if ctx.parametros() else []
+        bloque = ctx.instruccion()  # Capturar todas las instrucciones dentro de la función
+        self.funciones[nombre_funcion] = (parametros, bloque)
+        return None
+
+
+    def visitParametros(self, ctx: GramaticaParser.ParametrosContext):
+        parametros = []
+        for i in range(len(ctx.tipo())):
+            tipo = ctx.tipo(i).getText()
+            nombre = ctx.VARIABLE(i).getText()
+            parametros.append((tipo, nombre))
+        return parametros
+
+    def visitLlamada_funcion(self, ctx: GramaticaParser.Llamada_funcionContext):
+        nombre_funcion = ctx.VARIABLE().getText()
+        print(f"Llamando a la función: {nombre_funcion}")  # DEBUG
+        if nombre_funcion not in self.funciones:
+            raise Exception(f"Función {nombre_funcion} no definida.")
+
+        parametros = self.visit(ctx.argumentos())
+        print(f"Parámetros recibidos: {parametros}")  # DEBUG
+
+        funcion_parametros, bloque = self.funciones[nombre_funcion]
+
+        if len(parametros) != len(funcion_parametros):
+            raise Exception(f"Cantidad de parámetros incorrecta para {nombre_funcion}.")
+
+        # Guardar entorno actual y crear un nuevo entorno local
+        entorno_anterior = self.env.copy()
+        self.env = {}
+
+        # Asignar parámetros al entorno local con conversión de tipos
+        for i, (tipo, nombre) in enumerate(funcion_parametros):
+            self.env[nombre] = int(parametros[i]) if tipo == "int" else parametros[i]
+
+        # Ejecutar cada instrucción en la función
+        for instr in bloque:
+            resultado = self.visit(instr)
+            if resultado is not None:  # Detectar return sin usar tuple
+                self.env = entorno_anterior  # Restaurar el entorno antes de salir
+                return resultado  # Retorna directamente el valor
+
+        # Restaurar el entorno antes de salir
+        self.env = entorno_anterior
+        return resultado
+
+
+
+    def visitArgumentos(self, ctx: GramaticaParser.ArgumentosContext):
+        argumentos = []
+        for arg in ctx.expr():
+            argumentos.append(self.visit(arg))
+        return argumentos
+    
+    def visitSentencia_return(self, ctx: GramaticaParser.Sentencia_returnContext):
+        return self.visit(ctx.expr())  # Devolver solo el valor
+
+

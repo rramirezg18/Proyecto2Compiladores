@@ -54,6 +54,31 @@ class GramaticaVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by GramaticaParser#sentencia_return.
+    def visitSentencia_return(self, ctx:GramaticaParser.Sentencia_returnContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GramaticaParser#funcion.
+    def visitFuncion(self, ctx:GramaticaParser.FuncionContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GramaticaParser#parametros.
+    def visitParametros(self, ctx:GramaticaParser.ParametrosContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GramaticaParser#argumentos.
+    def visitArgumentos(self, ctx:GramaticaParser.ArgumentosContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by GramaticaParser#llamada_funcion.
+    def visitLlamada_funcion(self, ctx:GramaticaParser.Llamada_funcionContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by GramaticaParser#bloque.
     def visitBloque(self, ctx:GramaticaParser.BloqueContext):
         return self.visitChildren(ctx)

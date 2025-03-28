@@ -89,6 +89,51 @@ class GramaticaListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by GramaticaParser#sentencia_return.
+    def enterSentencia_return(self, ctx:GramaticaParser.Sentencia_returnContext):
+        pass
+
+    # Exit a parse tree produced by GramaticaParser#sentencia_return.
+    def exitSentencia_return(self, ctx:GramaticaParser.Sentencia_returnContext):
+        pass
+
+
+    # Enter a parse tree produced by GramaticaParser#funcion.
+    def enterFuncion(self, ctx:GramaticaParser.FuncionContext):
+        pass
+
+    # Exit a parse tree produced by GramaticaParser#funcion.
+    def exitFuncion(self, ctx:GramaticaParser.FuncionContext):
+        pass
+
+
+    # Enter a parse tree produced by GramaticaParser#parametros.
+    def enterParametros(self, ctx:GramaticaParser.ParametrosContext):
+        pass
+
+    # Exit a parse tree produced by GramaticaParser#parametros.
+    def exitParametros(self, ctx:GramaticaParser.ParametrosContext):
+        pass
+
+
+    # Enter a parse tree produced by GramaticaParser#argumentos.
+    def enterArgumentos(self, ctx:GramaticaParser.ArgumentosContext):
+        pass
+
+    # Exit a parse tree produced by GramaticaParser#argumentos.
+    def exitArgumentos(self, ctx:GramaticaParser.ArgumentosContext):
+        pass
+
+
+    # Enter a parse tree produced by GramaticaParser#llamada_funcion.
+    def enterLlamada_funcion(self, ctx:GramaticaParser.Llamada_funcionContext):
+        pass
+
+    # Exit a parse tree produced by GramaticaParser#llamada_funcion.
+    def exitLlamada_funcion(self, ctx:GramaticaParser.Llamada_funcionContext):
+        pass
+
+
     # Enter a parse tree produced by GramaticaParser#bloque.
     def enterBloque(self, ctx:GramaticaParser.BloqueContext):
         pass

@@ -1,0 +1,9 @@
+program {
+    main() {
+        print(potencia(2, 3));
+    }
+
+    float potencia(float base, float exponente) {
+        return base ^ exponente;
+    }
+}

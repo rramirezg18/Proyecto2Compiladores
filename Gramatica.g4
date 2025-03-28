@@ -1,7 +1,7 @@
 grammar Gramatica;
 
 gramatica
-    : VARIABLE LLAVE_APERTURA MAIN LLAVE_APERTURA instruccion* LLAVE_CIERRE LLAVE_CIERRE EOF
+    : VARIABLE LLAVE_APERTURA MAIN LLAVE_APERTURA instruccion* LLAVE_CIERRE funcion* LLAVE_CIERRE EOF
     ;
 
 instruccion
@@ -10,6 +10,8 @@ instruccion
     | sentencia_if
     | sentencia_while
     | sentencia_for
+    | sentencia_return
+    | llamada_funcion
     ;
 
 declaracion_y_asignacion
@@ -42,8 +44,28 @@ sentencia_for
     ;
 
 for_incremento_y_disminucion
-    : VARIABLE (MASMAS | MENOSMENOS)//i++ i--
-    | declaracion_y_asignacion //i=i+2
+    : VARIABLE (MASMAS | MENOSMENOS) // i++ i--
+    | declaracion_y_asignacion // i = i + 2
+    ;
+
+sentencia_return
+    : RETURN expr FIN_DE_LINEA
+    ;
+
+funcion
+    : tipo VARIABLE PARENTESIS_APERTURA parametros? PARENTESIS_CIERRE LLAVE_APERTURA instruccion* (sentencia_return)? LLAVE_CIERRE
+    ;
+
+parametros
+    : tipo VARIABLE (COMA tipo VARIABLE)*
+    ;
+
+argumentos
+    : expr (COMA expr)*
+    ;
+
+llamada_funcion
+    : VARIABLE PARENTESIS_APERTURA argumentos? PARENTESIS_CIERRE
     ;
 
 bloque
@@ -51,9 +73,13 @@ bloque
     ;
 
 expr
-    : expr (POTENCIA | MULTIPLICACION | DIVISION | MAS | MENOS) expr
+    : MENOS expr
+    | <assoc=right> expr POTENCIA expr
+    | expr (MULTIPLICACION | DIVISION) expr
+    | expr (MAS | MENOS) expr
     | expr (MAYOR | MENOR | MAYOR_IGUAL_QUE | MENOR_IGUAL_QUE | IGUAL | DIFERENTE) expr
     | PARENTESIS_APERTURA expr PARENTESIS_CIERRE
+    | llamada_funcion
     | VARIABLE
     | NUMERO
     | CADENA
@@ -66,6 +92,7 @@ ELSE: 'else';
 WHILE: 'while';
 FOR: 'for';
 PRINT: 'print';
+RETURN: 'return';
 ASIGNACION: '=';
 
 MAS: '+';
@@ -99,6 +126,7 @@ PARENTESIS_CIERRE: ')';
 LLAVE_APERTURA: '{';
 LLAVE_CIERRE: '}';
 FIN_DE_LINEA: ';';
+COMA: ',';
 
 WS: [ \t\r\n]+ -> skip;
 COMENTARIO_LINEA: '---' ~[\r\n]* -> skip;
