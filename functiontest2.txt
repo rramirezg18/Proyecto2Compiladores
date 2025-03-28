@@ -1,0 +1,9 @@
+program {
+    main() {
+        print(sumar(5, 7));
+    }
+
+    int sumar(int a, int b) {
+        return a + b;
+    }
+}

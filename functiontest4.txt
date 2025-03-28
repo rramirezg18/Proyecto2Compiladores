@@ -1,0 +1,13 @@
+program {
+    main() {
+        contarHasta(5);
+    }
+
+    int contarHasta(int n) {
+        int i = 0;
+        for (i = 1; i <= n; i++) {
+            print(i);
+        }
+        return 0;
+    }
+}

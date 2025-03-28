@@ -65,7 +65,7 @@ argumentos
     ;
 
 llamada_funcion
-    : VARIABLE PARENTESIS_APERTURA argumentos? PARENTESIS_CIERRE
+    : VARIABLE PARENTESIS_APERTURA argumentos? PARENTESIS_CIERRE FIN_DE_LINEA?
     ;
 
 bloque

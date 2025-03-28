@@ -5,18 +5,18 @@ from GramaticaParser import GramaticaParser
 class AnalizadorVisitor(GramaticaVisitor):
     def __init__(self):
         self.env = {}  # Almacena variables
-        self.funciones = {}  # Almacena funciones (nombre -> (parámetros, bloque))
+        self.funciones = {}  # Almacena funciones 
 
     def visitGramatica(self, ctx: GramaticaParser.GramaticaContext):
-        # Registrar todas las funciones
+        # Registra todas las funcionessssssssssssssss
         for funcion in ctx.funcion():
             self.visitFuncion(funcion)
 
-        print("Funciones registradas:", self.funciones)  # DEBUG
+        #print("Funciones registradas:", self.funciones)  # DEBUG
 
         # Ejecutar las instrucciones principales
         result = None
-        for instr in ctx.instruccion():  # Si `gramatica` tiene `instruccion()`
+        for instr in ctx.instruccion():  
             result = self.visit(instr)
 
         return result
@@ -61,7 +61,7 @@ class AnalizadorVisitor(GramaticaVisitor):
         return None
 
     def visitSentencia_for(self, ctx: GramaticaParser.Sentencia_forContext):
-        self.visit(ctx.declaracion_y_asignacion())  # Inicialización
+        self.visit(ctx.declaracion_y_asignacion())  # Inicialización de una variable en fooooooooooooor
         while self.visit(ctx.expr()):
             self.visit(ctx.bloque())
             self.visit(ctx.for_incremento_y_disminucion())
@@ -88,8 +88,9 @@ class AnalizadorVisitor(GramaticaVisitor):
         for instr in ctx.instruccion():
             resultado = self.visit(instr)
             if isinstance(resultado, tuple) and resultado[0] == "return":
-                return resultado[1]  # Devolver el valor de return si se encuentra
+                return resultado  
         return None
+
 
 
 
@@ -154,9 +155,12 @@ class AnalizadorVisitor(GramaticaVisitor):
     def visitFuncion(self, ctx: GramaticaParser.FuncionContext):
         nombre_funcion = ctx.VARIABLE().getText()
         parametros = self.visit(ctx.parametros()) if ctx.parametros() else []
-        bloque = ctx.instruccion()  # Capturar todas las instrucciones dentro de la función
-        self.funciones[nombre_funcion] = (parametros, bloque)
+        instrucciones = ctx.instruccion()  # Todas las instrucciones dentro de la función
+        sentencia_ret = ctx.sentencia_return() if ctx.sentencia_return() else None
+        # guardaambas partes
+        self.funciones[nombre_funcion] = (parametros, instrucciones, sentencia_ret)
         return None
+
 
 
     def visitParametros(self, ctx: GramaticaParser.ParametrosContext):
@@ -169,14 +173,15 @@ class AnalizadorVisitor(GramaticaVisitor):
 
     def visitLlamada_funcion(self, ctx: GramaticaParser.Llamada_funcionContext):
         nombre_funcion = ctx.VARIABLE().getText()
-        print(f"Llamando a la función: {nombre_funcion}")  # DEBUG
+        #print(f"Llamando a la función: {nombre_funcion}") 
         if nombre_funcion not in self.funciones:
             raise Exception(f"Función {nombre_funcion} no definida.")
 
         parametros = self.visit(ctx.argumentos())
-        print(f"Parámetros recibidos: {parametros}")  # DEBUG
+        #print(f"Parámetros recibidos: {parametros}")
 
-        funcion_parametros, bloque = self.funciones[nombre_funcion]
+        # trae ambas partes de la función:
+        funcion_parametros, instrucciones, sentencia_ret = self.funciones[nombre_funcion]
 
         if len(parametros) != len(funcion_parametros):
             raise Exception(f"Cantidad de parámetros incorrecta para {nombre_funcion}.")
@@ -190,15 +195,27 @@ class AnalizadorVisitor(GramaticaVisitor):
             self.env[nombre] = int(parametros[i]) if tipo == "int" else parametros[i]
 
         # Ejecutar cada instrucción en la función
-        for instr in bloque:
+        for instr in instrucciones:
             resultado = self.visit(instr)
-            if resultado is not None:  # Detectar return sin usar tuple
+            if isinstance(resultado, tuple) and resultado[0] == "return":
                 self.env = entorno_anterior  # Restaurar el entorno antes de salir
-                return resultado  # Retorna directamente el valor
+                return resultado[1]
+
+        # Si ninguna instrucción produjo retorno y hay sentencia_return, evalúala
+        if sentencia_ret:
+            resultado = self.visit(sentencia_ret)
+            if isinstance(resultado, tuple) and resultado[0] == "return":
+                self.env = entorno_anterior
+                return resultado[1]
+            else:
+                self.env = entorno_anterior
+                return resultado
 
         # Restaurar el entorno antes de salir
         self.env = entorno_anterior
-        return resultado
+        return None
+
+
 
 
 
@@ -209,6 +226,7 @@ class AnalizadorVisitor(GramaticaVisitor):
         return argumentos
     
     def visitSentencia_return(self, ctx: GramaticaParser.Sentencia_returnContext):
-        return self.visit(ctx.expr())  # Devolver solo el valor
+        return ("return", self.visit(ctx.expr()))
+
 
 

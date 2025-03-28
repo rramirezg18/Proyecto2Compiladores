@@ -1,0 +1,9 @@
+program {
+    main() {
+        print(concatenar("Hola, ", "mundo!"));
+    }
+
+    string concatenar(string a, string b) {
+        return a + b;
+    }
+}

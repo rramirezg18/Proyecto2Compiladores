@@ -1,0 +1,19 @@
+miPrograma {
+    main() {
+        int resultado = sumaHasta(5);
+        print(resultado);
+    }
+
+    int sumaHasta(int n) {
+        int suma = 0;
+        int contador = 1;
+        while (contador < n) {
+            suma = suma + contador;
+            contador = contador + 1;
+        }
+        return suma;
+    }
+}
+
+
+

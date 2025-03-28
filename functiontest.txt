@@ -3,7 +3,7 @@ program {
         print(potencia(2, 3));
     }
 
-    float potencia(float base, float exponente) {
+    int potencia(int base, int exponente) {
         return base ^ exponente;
     }
 }
