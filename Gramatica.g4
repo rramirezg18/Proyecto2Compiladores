@@ -73,18 +73,19 @@ bloque
     ;
 
 expr
-    : MENOS expr
-    | <assoc=right> expr POTENCIA expr
+    : <assoc=right> expr POTENCIA expr       // Mayor precedencia
     | expr (MULTIPLICACION | DIVISION) expr
     | expr (MAS | MENOS) expr
     | expr (MAYOR | MENOR | MAYOR_IGUAL_QUE | MENOR_IGUAL_QUE | IGUAL | DIFERENTE) expr
-    | PARENTESIS_APERTURA expr PARENTESIS_CIERRE
+    | MENOS expr  // Negación unaria (colocada después para evitar ambigüedad)
+    | PARENTESIS_APERTURA expr PARENTESIS_CIERRE  // Agrupación con paréntesis
     | llamada_funcion
     | VARIABLE
     | NUMERO
     | CADENA
     | BOOLEANO
     ;
+
 
 MAIN: 'main()';
 IF: 'if';

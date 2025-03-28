@@ -71,18 +71,18 @@ def serializedATN():
         1,0,0,0,167,168,1,0,0,0,168,27,1,0,0,0,169,171,5,32,0,0,170,172,
         3,2,1,0,171,170,1,0,0,0,172,173,1,0,0,0,173,171,1,0,0,0,173,174,
         1,0,0,0,174,175,1,0,0,0,175,176,5,33,0,0,176,29,1,0,0,0,177,178,
-        6,15,-1,0,178,179,5,10,0,0,179,190,3,30,15,11,180,181,5,30,0,0,181,
+        6,15,-1,0,178,179,5,10,0,0,179,190,3,30,15,7,180,181,5,30,0,0,181,
         182,3,30,15,0,182,183,5,31,0,0,183,190,1,0,0,0,184,190,3,26,13,0,
         185,190,5,26,0,0,186,190,5,27,0,0,187,190,5,28,0,0,188,190,5,29,
         0,0,189,177,1,0,0,0,189,180,1,0,0,0,189,184,1,0,0,0,189,185,1,0,
         0,0,189,186,1,0,0,0,189,187,1,0,0,0,189,188,1,0,0,0,190,205,1,0,
-        0,0,191,192,10,10,0,0,192,193,5,13,0,0,193,204,3,30,15,10,194,195,
-        10,9,0,0,195,196,7,2,0,0,196,204,3,30,15,10,197,198,10,8,0,0,198,
-        199,7,3,0,0,199,204,3,30,15,9,200,201,10,7,0,0,201,202,7,4,0,0,202,
-        204,3,30,15,8,203,191,1,0,0,0,203,194,1,0,0,0,203,197,1,0,0,0,203,
-        200,1,0,0,0,204,207,1,0,0,0,205,203,1,0,0,0,205,206,1,0,0,0,206,
-        31,1,0,0,0,207,205,1,0,0,0,18,39,46,59,62,91,96,116,126,133,137,
-        149,157,163,167,173,189,203,205
+        0,0,191,192,10,11,0,0,192,193,5,13,0,0,193,204,3,30,15,11,194,195,
+        10,10,0,0,195,196,7,2,0,0,196,204,3,30,15,11,197,198,10,9,0,0,198,
+        199,7,3,0,0,199,204,3,30,15,10,200,201,10,8,0,0,201,202,7,4,0,0,
+        202,204,3,30,15,9,203,191,1,0,0,0,203,194,1,0,0,0,203,197,1,0,0,
+        0,203,200,1,0,0,0,204,207,1,0,0,0,205,203,1,0,0,0,205,206,1,0,0,
+        0,206,31,1,0,0,0,207,205,1,0,0,0,18,39,46,59,62,91,96,116,126,133,
+        137,149,157,163,167,173,189,203,205
     ]
 
 class GramaticaParser ( Parser ):
@@ -1555,7 +1555,7 @@ class GramaticaParser ( Parser ):
                 self.state = 178
                 self.match(GramaticaParser.MENOS)
                 self.state = 179
-                self.expr(11)
+                self.expr(7)
                 pass
 
             elif la_ == 2:
@@ -1609,22 +1609,22 @@ class GramaticaParser ( Parser ):
                         localctx = GramaticaParser.ExprContext(self, _parentctx, _parentState)
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_expr)
                         self.state = 191
-                        if not self.precpred(self._ctx, 10):
+                        if not self.precpred(self._ctx, 11):
                             from antlr4.error.Errors import FailedPredicateException
-                            raise FailedPredicateException(self, "self.precpred(self._ctx, 10)")
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 11)")
                         self.state = 192
                         self.match(GramaticaParser.POTENCIA)
                         self.state = 193
-                        self.expr(10)
+                        self.expr(11)
                         pass
 
                     elif la_ == 2:
                         localctx = GramaticaParser.ExprContext(self, _parentctx, _parentState)
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_expr)
                         self.state = 194
-                        if not self.precpred(self._ctx, 9):
+                        if not self.precpred(self._ctx, 10):
                             from antlr4.error.Errors import FailedPredicateException
-                            raise FailedPredicateException(self, "self.precpred(self._ctx, 9)")
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 10)")
                         self.state = 195
                         _la = self._input.LA(1)
                         if not(_la==11 or _la==12):
@@ -1633,16 +1633,16 @@ class GramaticaParser ( Parser ):
                             self._errHandler.reportMatch(self)
                             self.consume()
                         self.state = 196
-                        self.expr(10)
+                        self.expr(11)
                         pass
 
                     elif la_ == 3:
                         localctx = GramaticaParser.ExprContext(self, _parentctx, _parentState)
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_expr)
                         self.state = 197
-                        if not self.precpred(self._ctx, 8):
+                        if not self.precpred(self._ctx, 9):
                             from antlr4.error.Errors import FailedPredicateException
-                            raise FailedPredicateException(self, "self.precpred(self._ctx, 8)")
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 9)")
                         self.state = 198
                         _la = self._input.LA(1)
                         if not(_la==9 or _la==10):
@@ -1651,16 +1651,16 @@ class GramaticaParser ( Parser ):
                             self._errHandler.reportMatch(self)
                             self.consume()
                         self.state = 199
-                        self.expr(9)
+                        self.expr(10)
                         pass
 
                     elif la_ == 4:
                         localctx = GramaticaParser.ExprContext(self, _parentctx, _parentState)
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_expr)
                         self.state = 200
-                        if not self.precpred(self._ctx, 7):
+                        if not self.precpred(self._ctx, 8):
                             from antlr4.error.Errors import FailedPredicateException
-                            raise FailedPredicateException(self, "self.precpred(self._ctx, 7)")
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 8)")
                         self.state = 201
                         _la = self._input.LA(1)
                         if not((((_la) & ~0x3f) == 0 and ((1 << _la) & 1032192) != 0)):
@@ -1669,7 +1669,7 @@ class GramaticaParser ( Parser ):
                             self._errHandler.reportMatch(self)
                             self.consume()
                         self.state = 202
-                        self.expr(8)
+                        self.expr(9)
                         pass
 
              
@@ -1699,19 +1699,19 @@ class GramaticaParser ( Parser ):
 
     def expr_sempred(self, localctx:ExprContext, predIndex:int):
             if predIndex == 0:
-                return self.precpred(self._ctx, 10)
+                return self.precpred(self._ctx, 11)
          
 
             if predIndex == 1:
-                return self.precpred(self._ctx, 9)
+                return self.precpred(self._ctx, 10)
          
 
             if predIndex == 2:
-                return self.precpred(self._ctx, 8)
+                return self.precpred(self._ctx, 9)
          
 
             if predIndex == 3:
-                return self.precpred(self._ctx, 7)
+                return self.precpred(self._ctx, 8)
          
 
 

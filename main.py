@@ -9,9 +9,16 @@ from visitor import AnalizadorVisitor
 class ErrorListener(ErrorListener):
     def __init__(self):
         super(ErrorListener, self).__init__()
-    # caputa los errores en sintaxis
+
+    # Captura los errores de sintaxis
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
-        raise Exception(f"Error sintáctico en la línea {line}, columna {column}: {msg}")
+        error_msg = (
+            f"\n[Error de Sintaxis]\n"
+            f"Línea {line}, Columna {column}\n"
+            f"Token problemático: '{offendingSymbol.text if offendingSymbol else 'N/A'}'\n"
+            f"Mensaje: {msg}\n"
+        )
+        raise Exception(error_msg)
 
 def main(argv):
     if len(argv) < 2:#valida que se pase el archivo
