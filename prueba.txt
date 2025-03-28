@@ -4,7 +4,7 @@ main(){
 	int y = 1;
 	int z = x + y;
 	print(z);
-	int a = 2.5;
+	int a = 2;
 	int b = 3;
 	int r = a + b;
 	print(r);
