@@ -13,7 +13,7 @@ class ErrorListener(ErrorListener):
     # Captura los errores de sintaxis
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
         error_msg = (
-            f"\n[Error de Sintaxis]\n"
+            f"\nError en la sintaxis\n"
             f"Línea {line}, Columna {column}\n"
             f"Token problemático: '{offendingSymbol.text if offendingSymbol else 'N/A'}'\n"
             f"Mensaje: {msg}\n"

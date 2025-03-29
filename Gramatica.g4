@@ -74,7 +74,7 @@ bloque
 
 expr
     : <assoc=right> expr POTENCIA expr       // Mayor precedencia
-    | expr (MULTIPLICACION | DIVISION) expr
+    | expr (MULTIPLICACION | DIVISION | MOD) expr
     | expr (MAS | MENOS) expr
     | expr (MAYOR | MENOR | MAYOR_IGUAL_QUE | MENOR_IGUAL_QUE | IGUAL | DIFERENTE) expr
     | MENOS expr  // Negación unaria (colocada después para evitar ambigüedad)
@@ -101,6 +101,7 @@ MENOS: '-';
 MULTIPLICACION: '*';
 DIVISION: '/';
 POTENCIA: '^';
+MOD:'%';
 
 IGUAL: '==';
 DIFERENTE: '!=';

@@ -87,6 +87,7 @@ class AnalizadorVisitor(GramaticaVisitor):
     # -------------------------------------------------------------------
     def visitSentencia_print(self, ctx: GramaticaParser.Sentencia_printContext):
         val, val_type = self.visit(ctx.expr())
+        
         if val_type in ("float", "int"):
             if val_type == "int":
                 print(int(val))
@@ -94,7 +95,9 @@ class AnalizadorVisitor(GramaticaVisitor):
                 print(f"{val:.1f}")
         else:
             print(val)
-        return (val, val_type)
+        
+        return None
+
 
     # -------------------------------------------------------------------
     # ---------------------- Estructuras de Control ---------------------
@@ -104,8 +107,8 @@ class AnalizadorVisitor(GramaticaVisitor):
 
         for i in range(numCondiciones):
             cond_val, cond_type = self.visit(ctx.expr(i))
-            # Debug
-            print(f"Condición {i}: {ctx.expr(i).getText()} -> {cond_val}, tipo {cond_type}")
+            
+            #print(f"Condición {i}: {ctx.expr(i).getText()} -> {cond_val}, tipo {cond_type}")
 
             if cond_type != "boolean":
                 raise Exception(f"Condición en 'if' no es booleana: {ctx.expr(i).getText()}")
@@ -137,9 +140,14 @@ class AnalizadorVisitor(GramaticaVisitor):
                 raise Exception("Condición en 'for' no es booleana.")
             if not cond_val:
                 break
-            self.visitBloque(ctx.bloque(), new_scope=False)
+            # Capturamos el resultado del bloque
+            bloque_result = self.visitBloque(ctx.bloque(), new_scope=False)
+            # Si el bloque retorna un valor (es una tupla "return"), lo propagamos
+            if isinstance(bloque_result, tuple) and bloque_result[0] == "return":
+                return bloque_result
             self.visit(ctx.for_incremento_y_disminucion())
         return None
+
 
     def visitFor_incremento_y_disminucion(self, ctx: GramaticaParser.For_incremento_y_disminucionContext):
         if ctx.getChildCount() == 2:
@@ -169,10 +177,11 @@ class AnalizadorVisitor(GramaticaVisitor):
             self.pop_env()
         return retorno
 
-    # -------------------------------------------------------------------
-    # -------------------------- Expresiones ----------------------------
-    # -------------------------------------------------------------------
     def visitExpr(self, ctx: GramaticaParser.ExprContext):
+        # Si es la alternativa de llamada a función, delega en visitLlamada_funcion.
+        if ctx.getChildCount() == 1 and ctx.llamada_funcion():
+            return self.visit(ctx.llamada_funcion())
+
         # Caso de un solo hijo: literal, variable, etc.
         if ctx.getChildCount() == 1:
             token_text = ctx.getText()
@@ -189,7 +198,7 @@ class AnalizadorVisitor(GramaticaVisitor):
                     return (int(token_text), "int")
             except ValueError:
                 return self.get_variable(token_text)
-        # Caso de expresiones unarias (por ejemplo, -expr)
+        # cuanooo es un numero negativu ejemploo -expr
         elif ctx.getChildCount() == 2:
             if ctx.getChild(0).getText() == '-':
                 val, val_type = self.visit(ctx.expr(0))
@@ -210,7 +219,7 @@ class AnalizadorVisitor(GramaticaVisitor):
         else:
             resultado = self.visitChildren(ctx)
 
-        print(f"visitExpr -> {ctx.getText()} = {resultado}")
+        #print(f"visitExpr -> {ctx.getText()} = {resultado}")
         return resultado
 
     def binary_operation(self, left_val, left_type, right_val, right_type, op):
@@ -218,15 +227,18 @@ class AnalizadorVisitor(GramaticaVisitor):
             self.check_numeric_types(left_type, right_type, op)
             final_type = "float" if (left_type == "float" or right_type == "float") else "int"
             return (left_val ** right_val, final_type)
-        elif op in ['*', '/']:
+        elif op in ['*', '/', '%']:
             self.check_numeric_types(left_type, right_type, op)
-            final_type = "float" if ('float' in [left_type, right_type]) else "int"
+            # Para '*' y '/' se calcula de forma similar.
             if op == '*':
                 result = left_val * right_val
-            else:
-                if final_type == "int":
-                    final_type = "float"
+            elif op == '/':
+                # Si ambos son int, convertir el resultado a float para evitar división entera
                 result = left_val / right_val
+            elif op == '%':
+                result = left_val % right_val
+            # El tipo final es "float" si alguno de los operandos es float; en caso contrario "int".
+            final_type = "float" if ('float' in [left_type, right_type]) else "int"
             return (result, final_type)
         elif op in ['+', '-']:
             if op == '+':
@@ -266,9 +278,6 @@ class AnalizadorVisitor(GramaticaVisitor):
         if t1 not in ("int", "float") or t2 not in ("int", "float"):
             raise Exception(f"Operación '{op}' no válida para tipos {t1} y {t2}.")
 
-    # -------------------------------------------------------------------
-    # ------------------------- Funciones -------------------------------
-    # -------------------------------------------------------------------
     def visitFuncion(self, ctx: GramaticaParser.FuncionContext):
         nombre_funcion = ctx.VARIABLE().getText()
         parametros = self.visit(ctx.parametros()) if ctx.parametros() else []
@@ -293,7 +302,7 @@ class AnalizadorVisitor(GramaticaVisitor):
         if nombre_funcion not in self.funciones:
             raise Exception(f"Función {nombre_funcion} no definida.")
 
-        parametros_llamada = self.visit(ctx.argumentos())
+        parametros_llamada = self.visit(ctx.argumentos()) if ctx.argumentos() else []
         funcion_parametros, instrucciones, sentencia_ret = self.funciones[nombre_funcion]
 
         if len(parametros_llamada) != len(funcion_parametros):
@@ -323,7 +332,8 @@ class AnalizadorVisitor(GramaticaVisitor):
 
         if retorno is None:
             return (None, "void")
-        return (retorno, self.infer_type(retorno))
+        return retorno
+
 
     def visitArgumentos(self, ctx: GramaticaParser.ArgumentosContext):
         argumentos = []
@@ -335,9 +345,7 @@ class AnalizadorVisitor(GramaticaVisitor):
         val, val_type = self.visit(ctx.expr())
         return ("return", (val, val_type))
 
-    # -------------------------------------------------------------------
-    # -------------------- Utilidades de tipo ---------------------------
-    # -------------------------------------------------------------------
+  
     def infer_type(self, val):
         if isinstance(val, bool):
             return "boolean"

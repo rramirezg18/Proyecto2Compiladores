@@ -1,0 +1,10 @@
+---mostrar 32
+program {
+    main() {
+        print(celsiusAFahrenheit(0));
+    }
+
+    float celsiusAFahrenheit(float c) {
+        return (c * 9 / 5) + 32;
+    }
+}
