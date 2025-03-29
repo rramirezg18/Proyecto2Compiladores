@@ -7,36 +7,33 @@ class AnalizadorVisitor(GramaticaVisitor):
         self.funciones = {}    # Funciones
 
     # Métodos de manejo de entornos
-    def current_env(self):
+    def entorno_actual(self):
         return self.env_stack[-1]
 
-    def push_env(self):
+    def apilar_entorno(self):
         self.env_stack.append({})
 
-    def pop_env(self):
+    def desapilar_entorno(self):
         self.env_stack.pop()
 
-    def declare_variable(self, name, value, vtype):
-        if name in self.current_env():
+    def declarar_variable(self, name, value, vtype):
+        if name in self.entorno_actual():
             raise Exception(f"Variable {name} ya está declarada en este ámbito.")
-        self.current_env()[name] = (value, vtype)
+        self.entorno_actual()[name] = (value, vtype)
 
-    def assign_variable(self, name, value, vtype):
+    def asignar_variable(self, name, value, vtype):
         for env in reversed(self.env_stack):
             if name in env:
                 env[name] = (value, vtype)
                 return
         raise Exception(f"Variable {name} no definida.")
 
-    def get_variable(self, name):
+    def obtener_variable(self, name):
         for env in reversed(self.env_stack):
             if name in env:
                 return env[name]
         raise Exception(f"Variable {name} no definida.")
 
-    # -------------------------------------------------------------------
-    # ----------------------- Visita la gramática -----------------------
-    # -------------------------------------------------------------------
     def visitGramatica(self, ctx: GramaticaParser.GramaticaContext):
         # 1) Registrar todas las funciones
         for funcion in ctx.funcion():
@@ -58,22 +55,15 @@ class AnalizadorVisitor(GramaticaVisitor):
         if ctx.tipo() is not None:
             declared_type = ctx.tipo().getText()
             new_val, final_type = self.check_type_compatibility(val, expr_type, declared_type)
-            self.declare_variable(var_name, new_val, declared_type)
+            self.declarar_variable(var_name, new_val, declared_type)
             return (new_val, declared_type)
         else:
-            self.assign_variable(var_name, val, expr_type)
+            self.asignar_variable(var_name, val, expr_type)
             return (val, expr_type)
 
-    # -------------------------------------------------------------------
-    # ----------------------- Manejo de TIPOS ---------------------------
-    # -------------------------------------------------------------------
+    #control de tipos de variables
+    #valida si los operandos son del mismo tipo
     def check_type_compatibility(self, val, expr_type, target_type):
-        """
-        Verifica si expr_type se puede asignar a target_type.
-        Si es necesario, hace conversión (por ejemplo, int -> float).
-        Lanza excepción si no es compatible.
-        Devuelve (new_val, final_type).
-        """
         if target_type == expr_type:
             return (val, expr_type)
 
@@ -82,9 +72,6 @@ class AnalizadorVisitor(GramaticaVisitor):
 
         raise Exception(f"No se puede asignar {expr_type} a {target_type}.")
 
-    # -------------------------------------------------------------------
-    # --------------------------- Print ---------------------------------
-    # -------------------------------------------------------------------
     def visitSentencia_print(self, ctx: GramaticaParser.Sentencia_printContext):
         val, val_type = self.visit(ctx.expr())
         
@@ -99,9 +86,6 @@ class AnalizadorVisitor(GramaticaVisitor):
         return None
 
 
-    # -------------------------------------------------------------------
-    # ---------------------- Estructuras de Control ---------------------
-    # -------------------------------------------------------------------
     def visitSentencia_if(self, ctx: GramaticaParser.Sentencia_ifContext):
         numCondiciones = len(ctx.expr())
 
@@ -140,9 +124,8 @@ class AnalizadorVisitor(GramaticaVisitor):
                 raise Exception("Condición en 'for' no es booleana.")
             if not cond_val:
                 break
-            # Capturamos el resultado del bloque
+            # Se captura el resultado en el bloque del foooooooooor
             bloque_result = self.visitBloque(ctx.bloque(), new_scope=False)
-            # Si el bloque retorna un valor (es una tupla "return"), lo propagamos
             if isinstance(bloque_result, tuple) and bloque_result[0] == "return":
                 return bloque_result
             self.visit(ctx.for_incremento_y_disminucion())
@@ -152,21 +135,21 @@ class AnalizadorVisitor(GramaticaVisitor):
     def visitFor_incremento_y_disminucion(self, ctx: GramaticaParser.For_incremento_y_disminucionContext):
         if ctx.getChildCount() == 2:
             var_name = ctx.VARIABLE().getText()
-            val, val_type = self.get_variable(var_name)
+            val, val_type = self.obtener_variable(var_name)
             if val_type not in ("int", "float"):
                 raise Exception(f"No se puede aplicar ++/-- a tipo {val_type}.")
             if ctx.MASMAS():
                 new_val = val + 1
             else:
                 new_val = val - 1
-            self.assign_variable(var_name, new_val, val_type)
+            self.asignar_variable(var_name, new_val, val_type)
         else:
             self.visit(ctx.declaracion_y_asignacion())
         return None
 
     def visitBloque(self, ctx: GramaticaParser.BloqueContext, new_scope=True):
         if new_scope:
-            self.push_env()
+            self.apilar_entorno()
         retorno = None
         for instr in ctx.instruccion():
             resultado = self.visit(instr)
@@ -174,7 +157,7 @@ class AnalizadorVisitor(GramaticaVisitor):
                 retorno = resultado
                 break
         if new_scope:
-            self.pop_env()
+            self.desapilar_entorno()
         return retorno
 
     def visitExpr(self, ctx: GramaticaParser.ExprContext):
@@ -182,7 +165,7 @@ class AnalizadorVisitor(GramaticaVisitor):
         if ctx.getChildCount() == 1 and ctx.llamada_funcion():
             return self.visit(ctx.llamada_funcion())
 
-        # Caso de un solo hijo: literal, variable, etc.
+        # Caso de un solo hijo literal, variable
         if ctx.getChildCount() == 1:
             token_text = ctx.getText()
             if token_text.startswith('"') and token_text.endswith('"'):
@@ -197,8 +180,8 @@ class AnalizadorVisitor(GramaticaVisitor):
                 else:
                     return (int(token_text), "int")
             except ValueError:
-                return self.get_variable(token_text)
-        # cuanooo es un numero negativu ejemploo -expr
+                return self.obtener_variable(token_text)
+        # cuanooo es un numero negativo ejemploo -expr
         elif ctx.getChildCount() == 2:
             if ctx.getChild(0).getText() == '-':
                 val, val_type = self.visit(ctx.expr(0))
@@ -215,20 +198,20 @@ class AnalizadorVisitor(GramaticaVisitor):
                 left_val, left_type = self.visit(ctx.expr(0))
                 right_val, right_type = self.visit(ctx.expr(1))
                 op = ctx.getChild(1).getText()
-                resultado = self.binary_operation(left_val, left_type, right_val, right_type, op)
+                resultado = self.operacion_binaria(left_val, left_type, right_val, right_type, op)
         else:
             resultado = self.visitChildren(ctx)
 
         #print(f"visitExpr -> {ctx.getText()} = {resultado}")
         return resultado
 
-    def binary_operation(self, left_val, left_type, right_val, right_type, op):
+    def operacion_binaria(self, left_val, left_type, right_val, right_type, op):
         if op == '^':
-            self.check_numeric_types(left_type, right_type, op)
+            self.revisa_tipos_numericos(left_type, right_type, op)
             final_type = "float" if (left_type == "float" or right_type == "float") else "int"
             return (left_val ** right_val, final_type)
         elif op in ['*', '/', '%']:
-            self.check_numeric_types(left_type, right_type, op)
+            self.revisa_tipos_numericos(left_type, right_type, op)
             # Para '*' y '/' se calcula de forma similar.
             if op == '*':
                 result = left_val * right_val
@@ -244,11 +227,11 @@ class AnalizadorVisitor(GramaticaVisitor):
             if op == '+':
                 if left_type == "string" and right_type == "string":
                     return (left_val + right_val, "string")
-                self.check_numeric_types(left_type, right_type, op)
+                self.revisa_tipos_numericos(left_type, right_type, op)
                 final_type = "float" if ('float' in [left_type, right_type]) else "int"
                 return (left_val + right_val, final_type)
             else:
-                self.check_numeric_types(left_type, right_type, op)
+                self.revisa_tipos_numericos(left_type, right_type, op)
                 final_type = "float" if ('float' in [left_type, right_type]) else "int"
                 return (left_val - right_val, final_type)
         elif op in ['==', '!=', '<', '>', '<=', '>=']:
@@ -274,7 +257,7 @@ class AnalizadorVisitor(GramaticaVisitor):
             raise Exception(f"No se puede comparar {left_type} con {right_type} usando {op}.")
         raise Exception("Operador desconocido: " + op)
 
-    def check_numeric_types(self, t1, t2, op):
+    def revisa_tipos_numericos(self, t1, t2, op):
         if t1 not in ("int", "float") or t2 not in ("int", "float"):
             raise Exception(f"Operación '{op}' no válida para tipos {t1} y {t2}.")
 
@@ -314,7 +297,7 @@ class AnalizadorVisitor(GramaticaVisitor):
 
         for (tipo_formal, nombre_formal), (val_real, type_real) in zip(funcion_parametros, parametros_llamada):
             val_asignado, final_type = self.check_type_compatibility(val_real, type_real, tipo_formal)
-            self.current_env()[nombre_formal] = (val_asignado, final_type)
+            self.entorno_actual()[nombre_formal] = (val_asignado, final_type)
 
         retorno = None
         for instr in instrucciones:

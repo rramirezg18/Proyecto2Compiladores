@@ -1,0 +1,19 @@
+---funcion sin parametros para devolver una cadena
+program{
+    main(){
+        string name1 = "messi";
+        string name2 = "cristiano";
+        nombre();
+
+    }
+    string nombre(){
+        string name1 = "messi";
+        string name2 = "cristiano";
+        int number = 100;
+        if(number == 10){
+            print("mi nombre es " + name1);
+        }else{
+            print("mi nombre es " + name2);
+        }
+    }
+}
