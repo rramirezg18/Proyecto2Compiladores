@@ -19,6 +19,6 @@ main(){
 	int resultado = NuM1 + nuM2;
 	print(resultado);
 	print("hola" + "hola");
-	---print("El resultado es = " + res);
+	//print("El resultado es = " + res);
 }
 }

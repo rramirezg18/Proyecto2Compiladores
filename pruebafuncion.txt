@@ -1,4 +1,4 @@
----funcion sin parametros para devolver una cadena
+//funcion sin parametros para devolver una cadena
 program{
     main(){
         string name1 = "messi";

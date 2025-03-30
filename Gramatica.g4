@@ -131,5 +131,5 @@ FIN_DE_LINEA: ';';
 COMA: ',';
 
 WS: [ \t\r\n]+ -> skip;
-COMENTARIO_LINEA: '---' ~[\r\n]* -> skip;
-COMENTARIO_MULTILINEA: '---' .*? '---' -> skip;
+COMENTARIO_LINEA: '//' ~[\r\n]* -> skip;
+COMENTARIO_MULTILINEA: '//' .*? '///' -> skip;

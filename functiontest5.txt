@@ -1,4 +1,4 @@
----mostrar 32
+//mostrar 32
 program {
     main() {
         print(celsiusAFahrenheit(0));

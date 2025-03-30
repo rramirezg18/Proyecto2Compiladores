@@ -1,0 +1,11 @@
+program {
+    main() {
+        int a = 5;
+        if (a > 0) {
+            int b = 10;
+            print(b);           //muestra 10
+        }
+        print(a);               //muestra 5
+        //print(b);               //Error b fue declarada solo en el if 
+    }
+}

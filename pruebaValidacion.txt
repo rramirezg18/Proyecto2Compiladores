@@ -1,0 +1,11 @@
+program {
+    main() {
+        int x = 10;
+        int y = doble(x);
+        print(y);               // mortrara 20
+    }
+    int doble(int a){
+        // a es un parámetro local no se usa ninguna variable global aquí.
+        return a * 2;
+    }
+}

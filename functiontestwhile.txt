@@ -9,7 +9,7 @@ miPrograma {
         int contador = 1;
         while (contador < n) {
             suma = suma + contador;
-            contador = contador + 1;---imprime 10 como resultado
+            contador = contador + 1;//imprime 10 como resultado
         }
         return suma;
     }
