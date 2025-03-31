@@ -3,10 +3,10 @@ from antlr4 import FileStream, CommonTokenStream, ParseTreeWalker
 from antlr4.error.ErrorListener import ErrorListener
 from GramaticaLexer import GramaticaLexer
 from GramaticaParser import GramaticaParser
-from visitor import AnalizadorVisitor
 from listener import ValidacionListener
+from codegen_visitor import CodeGenVisitor
 
-# Clase para errores de sintaxis (ya la tenías definida)
+# Clase para errores de sintaxis
 class MiErrorListener(ErrorListener):
     def __init__(self):
         super(MiErrorListener, self).__init__()
@@ -24,21 +24,23 @@ def main(argv):
     if len(argv) < 2:
         print("Uso: python3 main.py <archivo>")
         return
+
     input_file = argv[1]
+    # Leer el archivo de entrada
     input_stream = FileStream(input_file, encoding="utf-8")
     lexer = GramaticaLexer(input_stream)
     stream = CommonTokenStream(lexer)
     parser = GramaticaParser(stream)
     parser.removeErrorListeners()
     parser.addErrorListener(MiErrorListener())
-    
+
     try:
         tree = parser.gramatica()
     except Exception as e:
         print("Error de parseo:", e)
         return
 
-    # Primera pasada: Validación semántica (tipos, alcances y declaraciones)
+    # Primera pasada: Validación semántica
     validacion_listener = ValidacionListener()
     walker = ParseTreeWalker()
     try:
@@ -47,12 +49,22 @@ def main(argv):
         print("Error de validación semántica:", e)
         return
 
-    # Segunda pasada: Evaluación del programa (expresiones y cálculos)
-    visitor = AnalizadorVisitor()
+    # Segunda pasada: Generación de código intermedio (LLVM IR)
+    codegen_visitor = CodeGenVisitor()
     try:
-        visitor.visit(tree)
+        ir_code = codegen_visitor.visit(tree)
     except Exception as e:
-        print("Error durante la evaluación:", e)
+        print("Error durante la generación de IR:", e)
+        return
+
+    # Escribir el IR generado en un archivo, por ejemplo, "output.ll"
+    output_filename = "output.ll"
+    try:
+        with open(output_filename, "w") as f:
+            f.write(ir_code)
+        print(f"Código LLVM IR generado y guardado en {output_filename}")
+    except Exception as e:
+        print("Error al escribir el archivo de salida:", e)
 
 if __name__ == '__main__':
     main(sys.argv)
