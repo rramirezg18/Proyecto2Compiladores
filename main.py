@@ -1,70 +1,72 @@
 import sys
-from antlr4 import FileStream, CommonTokenStream, ParseTreeWalker
-from antlr4.error.ErrorListener import ErrorListener
+from antlr4 import *
+from antlr4.error.ErrorListener import ErrorListener 
 from GramaticaLexer import GramaticaLexer
 from GramaticaParser import GramaticaParser
-from listener import ValidacionListener
-from codegen_visitor import CodeGenVisitor
+from tabla_simbolos import TablaSimbolos
+from listener import AnalizadorSemantico
+from generadorIR_visitor import GeneradorCodigo
+from visitor import AnalizadorVisitor
 
-# Clase para errores de sintaxis
 class MiErrorListener(ErrorListener):
-    def __init__(self):
-        super(MiErrorListener, self).__init__()
-
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
-        error_msg = (
-            f"\nError en la sintaxis\n"
-            f"Línea {line}, Columna {column}\n"
-            f"Token problemático: '{offendingSymbol.text if offendingSymbol else 'N/A'}'\n"
-            f"Mensaje: {msg}\n"
-        )
-        raise Exception(error_msg)
+        raise Exception(f"Error sintáctico en línea {line}:{column} - {msg}")
 
-def main(argv):
-    if len(argv) < 2:
-        print("Uso: python3 main.py <archivo>")
+def main():
+    if len(sys.argv) < 2:
+        print("Uso: python main.py <archivo_entrada>")
         return
 
-    input_file = argv[1]
-    # Leer el archivo de entrada
-    input_stream = FileStream(input_file, encoding="utf-8")
+    # Análisis Léxico/Sintáctico
+    input_stream = FileStream(sys.argv[1])
     lexer = GramaticaLexer(input_stream)
-    stream = CommonTokenStream(lexer)
-    parser = GramaticaParser(stream)
+    lexer.removeErrorListeners()
+    lexer.addErrorListener(MiErrorListener())
+    
+    tokens = CommonTokenStream(lexer)
+    parser = GramaticaParser(tokens)
     parser.removeErrorListeners()
     parser.addErrorListener(MiErrorListener())
-
+    
     try:
         tree = parser.gramatica()
     except Exception as e:
-        print("Error de parseo:", e)
+        print(f"Error durante el parsing:\n{e}")
         return
 
-    # Primera pasada: Validación semántica
-    validacion_listener = ValidacionListener()
+    # Análisis Semántico
+    tabla_simbolos = TablaSimbolos()
+    analizador = AnalizadorSemantico(tabla_simbolos)
     walker = ParseTreeWalker()
+    
     try:
-        walker.walk(validacion_listener, tree)
+        walker.walk(analizador, tree)
     except Exception as e:
-        print("Error de validación semántica:", e)
+        print(f"Error semántico:\n{e}")
         return
-
-    # Segunda pasada: Generación de código intermedio (LLVM IR)
-    codegen_visitor = CodeGenVisitor()
+    #valida las operaciones y las muestra en pantalla antes de mostrar el mensaje de compilacion exitosa
+    Analizador = AnalizadorVisitor()
     try:
-        ir_code = codegen_visitor.visit(tree)
+        Analizador.visit(tree)  # Esto ejecutará los prints y mostrará los valores
     except Exception as e:
-        print("Error durante la generación de IR:", e)
+        print(f"Error durante evaluación:\n{e}")
         return
+    
+    # Después del análisis semántico
+    #print("Variables registradas:", tabla_simbolos.entornos)
+    #print("Contenido real:", [e for e in dir(tabla_simbolos) if not e.startswith('__')])
 
-    # Escribir el IR generado en un archivo, por ejemplo, "output.ll"
-    output_filename = "output.ll"
+    # Generación de Código
+    generador = GeneradorCodigo(tabla_simbolos)
+    #print("Tabla de símbolos a usar:", generador.ts.entornos)  # <-- Ahora después de crear generador
+
     try:
-        with open(output_filename, "w") as f:
-            f.write(ir_code)
-        print(f"Código LLVM IR generado y guardado en {output_filename}")
+        modulo_llvm = generador.visit(tree)
+        with open("output.ll", "w") as f:
+            f.write(str(modulo_llvm))
+        print("Compilación finalizada. Código LLVM IR generado en output.ll")
     except Exception as e:
-        print("Error al escribir el archivo de salida:", e)
+        print(f"Error durante la generación de código:\n{e}")
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main()

@@ -17,6 +17,15 @@ class GramaticaListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by GramaticaParser#main.
+    def enterMain(self, ctx:GramaticaParser.MainContext):
+        pass
+
+    # Exit a parse tree produced by GramaticaParser#main.
+    def exitMain(self, ctx:GramaticaParser.MainContext):
+        pass
+
+
     # Enter a parse tree produced by GramaticaParser#instruccion.
     def enterInstruccion(self, ctx:GramaticaParser.InstruccionContext):
         pass

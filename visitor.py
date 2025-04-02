@@ -1,302 +1,290 @@
-from GramaticaVisitor import GramaticaVisitor
+#valida las expresiones a partir del visitor original
+
+
+from antlr4 import *
+from GramaticaVisitor import GramaticaVisitor  # Importación faltante
 from GramaticaParser import GramaticaParser
 
-class AnalizadorVisitor(GramaticaVisitor):
+# permite devolver el valor de una funcion con return
+class ReturnValue(Exception):
+    def __init__(self, value):
+        self.value = value
+
+class AnalizadorVisitor(GramaticaVisitor):  #hereda directamente del Visitor original generado por antlr
     def __init__(self):
-        self.env_stack = [{}]  # Pila de entornos para la evaluación
-        self.funciones = {}    # Funciones definidas
-
-    def entorno_actual(self):
-        return self.env_stack[-1]
-
-    def apilar_entorno(self):
-        self.env_stack.append({})
-
-    def desapilar_entorno(self):
-        self.env_stack.pop()
-
-    def declarar_variable(self, name, value, vtype):
-        if name in self.entorno_actual():
-            raise Exception(f"Variable '{name}' ya está declarada en este ámbito.")
-        self.entorno_actual()[name] = (value, vtype)
-
-    def asignar_variable(self, name, value, vtype):
-        for env in reversed(self.env_stack):
-            if name in env:
-                env[name] = (value, vtype)
-                return
-        raise Exception(f"Variable '{name}' no definida.")
-
-    def obtener_variable(self, name):
-        for env in reversed(self.env_stack):
-            if name in env:
-                return env[name]
-        raise Exception(f"Variable '{name}' no definida.")
-
-    def check_type_compatibility(self, val, expr_type, target_type):
-        if target_type == expr_type:
-            return (val, expr_type)
-        if target_type == "float" and expr_type == "int":
-            return (float(val), "float")
-        raise Exception(f"No se puede asignar {expr_type} a {target_type}.")
-
-    def visitGramatica(self, ctx: GramaticaParser.GramaticaContext):
-        # Registrar funciones
+        super().__init__()
+        self.variables = [{}]
+        self.funciones = {}
+    
+    def push_scope(self):
+        self.variables.append({})
+    
+    def pop_scope(self):
+        self.variables.pop()
+    
+    def current_scope(self):
+        return self.variables[-1]
+    
+    # Visit a parse tree produced by GramaticaParser#gramatica.
+    def visitGramatica(self, ctx:GramaticaParser.GramaticaContext):
+        # Procesar todas las funciones primero
         for funcion in ctx.funcion():
-            self.visitFuncion(funcion)
-        # Ejecutar instrucciones principales (por ejemplo, dentro de main)
+            self.visit(funcion)
+        
+        # Buscar y ejecutar main
+        main_block = ctx.main()
+        if main_block:
+            return self.visit(main_block)
+        return None
+
+    # Visit a parse tree produced by GramaticaParser#main.
+    def visitMain(self, ctx:GramaticaParser.MainContext):
+        self.push_scope()
+        for inst in ctx.instruccion():
+            self.visit(inst)
+        self.pop_scope()
+        return None
+
+    # Visit a parse tree produced by GramaticaParser#instruccion.
+    def visitInstruccion(self, ctx:GramaticaParser.InstruccionContext):
+        return self.visitChildren(ctx)
+
+    # Visit a parse tree produced by GramaticaParser#declaracion_y_asignacion.
+    def visitDeclaracion_y_asignacion(self, ctx:GramaticaParser.Declaracion_y_asignacionContext):
+        var_name = ctx.VARIABLE().getText()
+        value = self.visit(ctx.expr())
+        
+        # Buscar en qué ámbito está la variable
+        for scope in reversed(self.variables):
+            if var_name in scope:
+                scope[var_name] = value
+                #print(f"Variable {var_name} actualizada a {value}")
+                return
+
+        # Si no existe, se agrega al ámbito actual
+        self.current_scope()[var_name] = value
+        #print(f"Variable {var_name} declarada con valor {value}")
+
+
+    # Visit a parse tree produced by GramaticaParser#tipo.
+    def visitTipo(self, ctx:GramaticaParser.TipoContext):
+        return self.visitChildren(ctx)
+
+    # Visit a parse tree produced by GramaticaParser#sentencia_print.
+    def visitSentencia_print(self, ctx:GramaticaParser.Sentencia_printContext):
+        value = self.visit(ctx.expr())
+        print(value)
+        return None
+
+    # Visit a parse tree produced by GramaticaParser#sentencia_if.
+    def visitSentencia_if(self, ctx:GramaticaParser.Sentencia_ifContext):
+        condicion = self.visit(ctx.expr(0))
+        #print(f"Evaluando if, condición: {condicion}")  # <-- Depuración
+
+        if isinstance(condicion, (int, float, bool)):  # Solo números y booleanos
+            condicion = bool(condicion)
+        else:
+            raise Exception(f"Condición no válida en if: {condicion}")
+        
+        if condicion:
+            return self.visit(ctx.bloque(0))
+
+        # Evaluar else if
+        for i in range(1, len(ctx.expr())):
+            condicion = self.visit(ctx.expr(i))
+            if isinstance(condicion, (int, float, bool)):
+                condicion = bool(condicion)
+            else:
+                raise Exception(f"Condición no válida en else if: {condicion}")
+
+            if condicion:
+                return self.visit(ctx.bloque(i))
+            if condicion:
+                #print("Entrando en el bloque del if")
+                self.visit(ctx.bloque(0))  # Ejecutamos el bloque
+                #print(f"Valor de w después del if: {self.current_scope().get('w', 'No existe')}")
+
+
+        # Evaluar else final
+        bloques = ctx.bloque()
+        expr_count = len(ctx.expr())
+        if len(bloques) > expr_count:
+            return self.visit(bloques[-1])
+
+        return None
+
+
+    # Visit a parse tree produced by GramaticaParser#sentencia_while.
+    def visitSentencia_while(self, ctx:GramaticaParser.Sentencia_whileContext):
+        while self.visit(ctx.expr()):
+            self.visit(ctx.bloque())
+        return None
+
+    # Visit a parse tree produced by GramaticaParser#sentencia_for.
+    def visitSentencia_for(self, ctx:GramaticaParser.Sentencia_forContext):
+        self.push_scope()  # Nuevo ámbito para el for
+        
+        # Inicialización si existe
+        if ctx.declaracion_y_asignacion():
+            self.visit(ctx.declaracion_y_asignacion())
+        
+        # Verificar condición inicial
+        if not ctx.expr():
+            raise Exception("El bucle for debe tener una condición")
+        
+        # Ejecutar el bucle
+        while True:
+            # Evaluar condición
+            condicion = self.visit(ctx.expr())
+            if not condicion:
+                break
+            
+            # Ejecutar el cuerpo del bucle
+            self.visit(ctx.bloque())
+            
+            # Ejecutar el incremento o disminucion si existe
+            if ctx.for_incremento_y_disminucion():
+                self.visit(ctx.for_incremento_y_disminucion())
+        
+        self.pop_scope()  # Salir del ámbito del for
+        return None
+
+    # Visit a parse tree produced by GramaticaParser#for_incremento_y_disminucion.
+    def visitFor_incremento_y_disminucion(self, ctx:GramaticaParser.For_incremento_y_disminucionContext):
+        if ctx.declaracion_y_asignacion():
+            return self.visit(ctx.declaracion_y_asignacion())
+        else:
+            var_name = ctx.VARIABLE().getText()
+            current = self.current_scope().get(var_name, 0)
+            if ctx.MASMAS():
+                self.current_scope()[var_name] = current + 1
+            else:
+                self.current_scope()[var_name] = current - 1
+            return None
+
+    # Visit a parse tree produced by GramaticaParser#sentencia_return.
+    def visitSentencia_return(self, ctx:GramaticaParser.Sentencia_returnContext):
+        result = self.visit(ctx.expr())
+        raise ReturnValue(result)  # Ya no necesita conversión aquí
+
+
+
+    # Visit a parse tree produced by GramaticaParser#funcion.
+    def visitFuncion(self, ctx:GramaticaParser.FuncionContext):
+        func_name = ctx.VARIABLE().getText()
+        params = self.visit(ctx.parametros()) if ctx.parametros() else []
+        self.funciones[func_name] = {
+            'params': params,
+            'body': ctx,
+            'return_type': ctx.tipo().getText() if ctx.tipo() else None
+        }
+        return None
+
+    # Visit a parse tree produced by GramaticaParser#parametros.
+    def visitParametros(self, ctx:GramaticaParser.ParametrosContext):
+        return [(t.getText(), var.getText()) for t, var in zip(ctx.tipo(), ctx.VARIABLE())]
+
+    # Visit a parse tree produced by GramaticaParser#argumentos.
+    def visitArgumentos(self, ctx:GramaticaParser.ArgumentosContext):
+        return [self.visit(expr) for expr in ctx.expr()]
+
+    # Visit a parse tree produced by GramaticaParser#llamada_funcion.
+    def visitLlamada_funcion(self, ctx:GramaticaParser.Llamada_funcionContext):
+        func_name = ctx.VARIABLE().getText()
+        
+        if func_name not in self.funciones:
+            raise Exception(f"Función no definida: {func_name}")
+        
+        func = self.funciones[func_name]
+        args = self.visit(ctx.argumentos()) if ctx.argumentos() else []
+        
+        if len(args) != len(func['params']):
+            raise Exception(f"Número incorrecto de argumentos para {func_name}")
+        
+        self.push_scope()
+        
+        # Asigna los parámetros en una funcion
+        for (param_type, param_name), arg_val in zip(func['params'], args):
+            self.current_scope()[param_name] = arg_val
+        
         result = None
-        for instr in ctx.instruccion():
-            result = self.visit(instr)
+        try:
+            # Ejecutar todas las instrucciones de la función
+            for inst in func['body'].instruccion():
+                self.visit(inst)
+            # En caso de que la función tenga un return fuera del bloque de instrucciones
+            if func['body'].sentencia_return():
+                self.visit(func['body'].sentencia_return())
+        except ReturnValue as rv:
+            result = rv.value
+        
+        self.pop_scope()
         return result
 
-    # --- Declaraciones y asignaciones ---
-    def visitDeclaracion_y_asignacion(self, ctx: GramaticaParser.Declaracion_y_asignacionContext):
-        var_name = ctx.VARIABLE().getText()
-        val, expr_type = self.visit(ctx.expr())
-        if ctx.tipo() is not None:
-            declared_type = ctx.tipo().getText()
-            new_val, final_type = self.check_type_compatibility(val, expr_type, declared_type)
-            self.declarar_variable(var_name, new_val, declared_type)
-            return (new_val, declared_type)
-        else:
-            self.asignar_variable(var_name, val, expr_type)
-            return (val, expr_type)
-
-    def visitSentencia_print(self, ctx: GramaticaParser.Sentencia_printContext):
-        val, val_type = self.visit(ctx.expr())
-        if val_type in ("int", "float"):
-            if val_type == "int":
-                print(int(val))
-            else:
-                print(f"{val:.1f}")
-        else:
-            print(val)
+    # Visit a parse tree produced by GramaticaParser#bloque.
+    def visitBloque(self, ctx:GramaticaParser.BloqueContext):
+        self.push_scope()
+        for inst in ctx.instruccion():
+            self.visit(inst)
+        self.pop_scope()
         return None
 
-    # --- Estructuras de control ---
-    def visitSentencia_if(self, ctx: GramaticaParser.Sentencia_ifContext):
-        numCondiciones = len(ctx.expr())
-        for i in range(numCondiciones):
-            cond_val, cond_type = self.visit(ctx.expr(i))
-            if cond_type != "boolean":
-                raise Exception(f"Condición en 'if' no es booleana: {ctx.expr(i).getText()}")
-            if cond_val:
-                return self.visitBloque(ctx.bloque(i), new_scope=False)
-        if ctx.ELSE() and len(ctx.bloque()) > numCondiciones:
-            return self.visitBloque(ctx.bloque(numCondiciones), new_scope=False)
-        return None
-
-    def visitSentencia_while(self, ctx: GramaticaParser.Sentencia_whileContext):
-        while True:
-            cond_val, cond_type = self.visit(ctx.expr())
-            if cond_type != "boolean":
-                raise Exception("Condición en 'while' no es booleana.")
-            if not cond_val:
-                break
-            self.visitBloque(ctx.bloque(), new_scope=False)
-        return None
-
-    def visitSentencia_for(self, ctx: GramaticaParser.Sentencia_forContext):
-        self.visit(ctx.declaracion_y_asignacion())
-        while True:
-            cond_val, cond_type = self.visit(ctx.expr())
-            if cond_type != "boolean":
-                raise Exception("Condición en 'for' no es booleana.")
-            if not cond_val:
-                break
-            bloque_result = self.visitBloque(ctx.bloque(), new_scope=False)
-            if isinstance(bloque_result, tuple) and bloque_result[0] == "return":
-                return bloque_result
-            self.visit(ctx.for_incremento_y_disminucion())
-        return None
-
-    def visitFor_incremento_y_disminucion(self, ctx: GramaticaParser.For_incremento_y_disminucionContext):
-        if ctx.getChildCount() == 2:
-            var_name = ctx.VARIABLE().getText()
-            val, val_type = self.obtener_variable(var_name)
-            if val_type not in ("int", "float"):
-                raise Exception(f"No se puede aplicar ++/-- a tipo {val_type}.")
-            if ctx.MASMAS():
-                new_val = val + 1
-            else:
-                new_val = val - 1
-            self.asignar_variable(var_name, new_val, val_type)
-        else:
-            self.visit(ctx.declaracion_y_asignacion())
-        return None
-
-    def visitBloque(self, ctx: GramaticaParser.BloqueContext, new_scope=True):
-        if new_scope:
-            self.apilar_entorno()
-        retorno = None
-        for instr in ctx.instruccion():
-            resultado = self.visit(instr)
-            if isinstance(resultado, tuple) and resultado[0] == "return":
-                retorno = resultado
-                break
-        if new_scope:
-            self.desapilar_entorno()
-        return retorno
-
-    # --- Expresiones ---
-    def visitExpr(self, ctx: GramaticaParser.ExprContext):
-        if ctx.getChildCount() == 1 and ctx.llamada_funcion():
+    # Visit a parse tree produced by GramaticaParser#expr.
+    def visitExpr(self, ctx:GramaticaParser.ExprContext):
+        if ctx.POTENCIA():
+            left = self.visit(ctx.expr(0))
+            right = self.visit(ctx.expr(1))
+            return left ** right
+        elif ctx.MULTIPLICACION():
+            return self.visit(ctx.expr(0)) * self.visit(ctx.expr(1))
+        elif ctx.DIVISION():
+            return self.visit(ctx.expr(0)) / self.visit(ctx.expr(1))
+        elif ctx.MOD():
+            return self.visit(ctx.expr(0)) % self.visit(ctx.expr(1))
+        elif ctx.MAS():
+            return self.visit(ctx.expr(0)) + self.visit(ctx.expr(1))
+        elif ctx.MENOS():
+            if ctx.getChildCount() == 2:  # Negación unaria
+                return -self.visit(ctx.expr(0))
+            else:  # Resta binaria
+                return self.visit(ctx.expr(0)) - self.visit(ctx.expr(1))
+        elif ctx.MAYOR():
+            return self.visit(ctx.expr(0)) > self.visit(ctx.expr(1))
+        elif ctx.MENOR():
+            return self.visit(ctx.expr(0)) < self.visit(ctx.expr(1))
+        elif ctx.MAYOR_IGUAL_QUE():
+            return self.visit(ctx.expr(0)) >= self.visit(ctx.expr(1))
+        elif ctx.MENOR_IGUAL_QUE():
+            return self.visit(ctx.expr(0)) <= self.visit(ctx.expr(1))
+        elif ctx.IGUAL():
+            return self.visit(ctx.expr(0)) == self.visit(ctx.expr(1))
+        elif ctx.DIFERENTE():
+            return self.visit(ctx.expr(0)) != self.visit(ctx.expr(1))
+        elif ctx.llamada_funcion():
             return self.visit(ctx.llamada_funcion())
-        if ctx.getChildCount() == 1:
-            token_text = ctx.getText()
-            if token_text.startswith('"') and token_text.endswith('"'):
-                return (token_text[1:-1], "string")
-            if token_text == "true":
-                return (True, "boolean")
-            if token_text == "false":
-                return (False, "boolean")
-            try:
-                if '.' in token_text:
-                    return (float(token_text), "float")
-                else:
-                    return (int(token_text), "int")
-            except ValueError:
-                return self.obtener_variable(token_text)
-        elif ctx.getChildCount() == 2:
-            if ctx.getChild(0).getText() == '-':
-                val, val_type = self.visit(ctx.expr(0))
-                if val_type not in ("int", "float"):
-                    raise Exception(f"Operador unario '-' no es válido para tipo {val_type}.")
-                return (-val, val_type)
+        elif ctx.VARIABLE():
+            var_name = ctx.VARIABLE().getText()
+            #print(f"Buscando variable: {var_name}, Variables actuales: {self.variables}")  # Debug
+            for scope in reversed(self.variables):
+                if var_name in scope:
+                    return scope[var_name]
+            raise Exception(f"Variable no definida: {var_name}")
+        elif ctx.NUMERO():
+            num_str = ctx.NUMERO().getText()
+            return float(num_str) if '.' in num_str else int(num_str)
+        elif ctx.CADENA():
+            return ctx.CADENA().getText()[1:-1]  # Eliminar comillas
+        elif ctx.BOOLEANO():
+            valor = ctx.BOOLEANO().getText().lower()  # Convertir a minúsculas para evitar problemas con mayúsculas
+            #print(f"Valor booleano detectado: {valor}")  # Debug
+            if valor == 'true':
+                return True
+            elif valor == 'false':
+                return False
             else:
-                return self.visitChildren(ctx)
-        elif ctx.getChildCount() == 3:
-            if ctx.getChild(0).getText() == '(' and ctx.getChild(2).getText() == ')':
-                return self.visit(ctx.expr(0))
-            else:
-                left_val, left_type = self.visit(ctx.expr(0))
-                right_val, right_type = self.visit(ctx.expr(1))
-                op = ctx.getChild(1).getText()
-                return self.operacion_binaria(left_val, left_type, right_val, right_type, op)
+                raise Exception(f"Valor booleano no reconocido: {valor}")
+
+        elif ctx.PARENTESIS_APERTURA():
+            return self.visit(ctx.expr(0))
         else:
-            return self.visitChildren(ctx)
-
-    def operacion_binaria(self, left_val, left_type, right_val, right_type, op):
-        if op == '^':
-            self.revisa_tipos_numericos(left_type, right_type, op)
-            final_type = "float" if (left_type == "float" or right_type == "float") else "int"
-            return (left_val ** right_val, final_type)
-        elif op in ['*', '/', '%']:
-            self.revisa_tipos_numericos(left_type, right_type, op)
-            if op == '*':
-                result = left_val * right_val
-            elif op == '/':
-                result = left_val / right_val
-            elif op == '%':
-                result = left_val % right_val
-            final_type = "float" if ('float' in [left_type, right_type]) else "int"
-            return (result, final_type)
-        elif op in ['+', '-']:
-            if op == '+':
-                if left_type == "string" and right_type == "string":
-                    return (left_val + right_val, "string")
-                self.revisa_tipos_numericos(left_type, right_type, op)
-                final_type = "float" if ('float' in [left_type, right_type]) else "int"
-                return (left_val + right_val, final_type)
-            else:
-                self.revisa_tipos_numericos(left_type, right_type, op)
-                final_type = "float" if ('float' in [left_type, right_type]) else "int"
-                return (left_val - right_val, final_type)
-        elif op in ['==', '!=', '<', '>', '<=', '>=']:
-            if left_type in ["int", "float"] and right_type in ["int", "float"]:
-                left_val, right_val = float(left_val), float(right_val)
-                if op == '==':
-                    return (left_val == right_val, "boolean")
-                elif op == '!=':
-                    return (left_val != right_val, "boolean")
-                elif op == '<':
-                    return (left_val < right_val, "boolean")
-                elif op == '>':
-                    return (left_val > right_val, "boolean")
-                elif op == '<=':
-                    return (left_val <= right_val, "boolean")
-                elif op == '>=':
-                    return (left_val >= right_val, "boolean")
-            if left_type == right_type:
-                if op == '==':
-                    return (left_val == right_val, "boolean")
-                elif op == '!=':
-                    return (left_val != right_val, "boolean")
-            raise Exception(f"No se puede comparar {left_type} con {right_type} usando {op}.")
-        raise Exception("Operador desconocido: " + op)
-
-    def revisa_tipos_numericos(self, t1, t2, op):
-        if t1 not in ("int", "float") or t2 not in ("int", "float"):
-            raise Exception(f"Operación '{op}' no válida para tipos {t1} y {t2}.")
-
-    # --- Funciones ---
-    def visitFuncion(self, ctx: GramaticaParser.FuncionContext):
-        nombre_funcion = ctx.VARIABLE().getText()
-        parametros = self.visit(ctx.parametros()) if ctx.parametros() else []
-        instrucciones = ctx.instruccion()
-        sentencia_ret = ctx.sentencia_return() if ctx.sentencia_return() else None
-        if nombre_funcion in self.funciones:
-            raise Exception(f"La función '{nombre_funcion}' ya está definida.")
-        self.funciones[nombre_funcion] = (parametros, instrucciones, sentencia_ret)
-        return None
-
-    def visitParametros(self, ctx: GramaticaParser.ParametrosContext):
-        parametros = []
-        for i in range(len(ctx.tipo())):
-            tipo = ctx.tipo(i).getText()
-            nombre = ctx.VARIABLE(i).getText()
-            parametros.append((tipo, nombre))
-        return parametros
-
-    def visitLlamada_funcion(self, ctx: GramaticaParser.Llamada_funcionContext):
-        nombre_funcion = ctx.VARIABLE().getText()
-        if nombre_funcion not in self.funciones:
-            raise Exception(f"Función '{nombre_funcion}' no definida.")
-        parametros_llamada = self.visit(ctx.argumentos()) if ctx.argumentos() else []
-        funcion_parametros, instrucciones, sentencia_ret = self.funciones[nombre_funcion]
-        if len(parametros_llamada) != len(funcion_parametros):
-            raise Exception(f"Cantidad de parámetros incorrecta para '{nombre_funcion}'.")
-        entorno_anterior = self.env_stack
-        self.env_stack = [{}]
-        for (tipo_formal, nombre_formal), (val_real, type_real) in zip(funcion_parametros, parametros_llamada):
-            val_asignado, final_type = self.check_type_compatibility(val_real, type_real, tipo_formal)
-            self.entorno_actual()[nombre_formal] = (val_asignado, final_type)
-        retorno = None
-        for instr in instrucciones:
-            resultado = self.visit(instr)
-            if isinstance(resultado, tuple) and resultado[0] == "return":
-                retorno = resultado[1]
-                break
-        if retorno is None and sentencia_ret:
-            ret_tuple = self.visit(sentencia_ret)
-            if isinstance(ret_tuple, tuple) and ret_tuple[0] == "return":
-                retorno = ret_tuple[1]
-        self.env_stack = entorno_anterior
-        if retorno is None:
-            return (None, "void")
-        return retorno
-
-    def visitArgumentos(self, ctx: GramaticaParser.ArgumentosContext):
-        argumentos = []
-        for arg in ctx.expr():
-            argumentos.append(self.visit(arg))
-        return argumentos
-
-    def visitSentencia_return(self, ctx: GramaticaParser.Sentencia_returnContext):
-        val, val_type = self.visit(ctx.expr())
-        return ("return", (val, val_type))
-
-    def infer_type(self, val):
-        if isinstance(val, bool):
-            return "boolean"
-        elif isinstance(val, int):
-            return "int"
-        elif isinstance(val, float):
-            return "float"
-        elif isinstance(val, str):
-            return "string"
-        elif val is None:
-            return "void"
-        else:
-            return "unknown"
+            raise Exception("Expresión no reconocida")

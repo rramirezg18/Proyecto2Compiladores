@@ -14,6 +14,11 @@ class GramaticaVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by GramaticaParser#main.
+    def visitMain(self, ctx:GramaticaParser.MainContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by GramaticaParser#instruccion.
     def visitInstruccion(self, ctx:GramaticaParser.InstruccionContext):
         return self.visitChildren(ctx)
