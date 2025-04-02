@@ -1,7 +1,6 @@
-//mostrar 32
 program {
     main() {
-        print(celsiusAFahrenheit(0));
+        print(celsiusAFahrenheit(32));
     }
 
     float celsiusAFahrenheit(float c) {

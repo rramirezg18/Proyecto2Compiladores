@@ -1,8 +1,7 @@
 #valida las expresiones a partir del visitor original
 
-
 from antlr4 import *
-from GramaticaVisitor import GramaticaVisitor  # Importación faltante
+from GramaticaVisitor import GramaticaVisitor
 from GramaticaParser import GramaticaParser
 
 # permite devolver el valor de una funcion con return
@@ -10,7 +9,7 @@ class ReturnValue(Exception):
     def __init__(self, value):
         self.value = value
 
-class AnalizadorVisitor(GramaticaVisitor):  #hereda directamente del Visitor original generado por antlr
+class AnalizadorVisitor(GramaticaVisitor):  # hereda directamente del Visitor original generado por antlr
     def __init__(self):
         super().__init__()
         self.variables = [{}]
@@ -25,6 +24,14 @@ class AnalizadorVisitor(GramaticaVisitor):  #hereda directamente del Visitor ori
     def current_scope(self):
         return self.variables[-1]
     
+    #método auxiliar para actualizar una variable en el ámbito en que ya existe
+    def set_variable(self, var_name, value):
+        for scope in reversed(self.variables):
+            if var_name in scope:
+                scope[var_name] = value
+                return
+        self.current_scope()[var_name] = value
+
     # Visit a parse tree produced by GramaticaParser#gramatica.
     def visitGramatica(self, ctx:GramaticaParser.GramaticaContext):
         # Procesar todas las funciones primero
@@ -54,17 +61,9 @@ class AnalizadorVisitor(GramaticaVisitor):  #hereda directamente del Visitor ori
         var_name = ctx.VARIABLE().getText()
         value = self.visit(ctx.expr())
         
-        # Buscar en qué ámbito está la variable
-        for scope in reversed(self.variables):
-            if var_name in scope:
-                scope[var_name] = value
-                #print(f"Variable {var_name} actualizada a {value}")
-                return
-
-        # Si no existe, se agrega al ámbito actual
-        self.current_scope()[var_name] = value
-        #print(f"Variable {var_name} declarada con valor {value}")
-
+        # Usamos el método auxiliar para actualizar o crear la variable en el ámbito correcto
+        self.set_variable(var_name, value)
+        #print(f"Variable {var_name} asignada con valor {value}")
 
     # Visit a parse tree produced by GramaticaParser#tipo.
     def visitTipo(self, ctx:GramaticaParser.TipoContext):
@@ -104,15 +103,13 @@ class AnalizadorVisitor(GramaticaVisitor):  #hereda directamente del Visitor ori
                 self.visit(ctx.bloque(0))  # Ejecutamos el bloque
                 #print(f"Valor de w después del if: {self.current_scope().get('w', 'No existe')}")
 
-
-        # Evaluar else final
+        #evalua else final
         bloques = ctx.bloque()
         expr_count = len(ctx.expr())
         if len(bloques) > expr_count:
             return self.visit(bloques[-1])
 
         return None
-
 
     # Visit a parse tree produced by GramaticaParser#sentencia_while.
     def visitSentencia_while(self, ctx:GramaticaParser.Sentencia_whileContext):
@@ -123,30 +120,39 @@ class AnalizadorVisitor(GramaticaVisitor):  #hereda directamente del Visitor ori
     # Visit a parse tree produced by GramaticaParser#sentencia_for.
     def visitSentencia_for(self, ctx:GramaticaParser.Sentencia_forContext):
         self.push_scope()  # Nuevo ámbito para el for
-        
-        # Inicialización si existe
+
+        expr_list = ctx.expr()
+        if not isinstance(expr_list, list):
+            expr_list = [expr_list]
+
+        #bandera para indicar que ya se evaluó la inicialización
+        inicializacion_evaluada = False
+
         if ctx.declaracion_y_asignacion():
             self.visit(ctx.declaracion_y_asignacion())
-        
-        # Verificar condición inicial
-        if not ctx.expr():
-            raise Exception("El bucle for debe tener una condición")
-        
-        # Ejecutar el bucle
+            if len(expr_list) < 1:
+                raise Exception("El bucle for debe tener una condición")
+            condition_expr = expr_list[0]
+        else:
+            if len(expr_list) < 2:
+                raise Exception("El bucle for debe tener asignación y condición")
+            #evalua la asignación una sola vez y no la vuelve a evaluar
+            self.visit(expr_list[0])
+            inicializacion_evaluada = True
+            condition_expr = expr_list[1]
+
         while True:
-            # Evaluar condición
-            condicion = self.visit(ctx.expr())
+            #se evalúa la condición y la asignación no se re-evalúa
+            condicion = self.visit(condition_expr)
             if not condicion:
                 break
-            
-            # Ejecutar el cuerpo del bucle
+
             self.visit(ctx.bloque())
-            
-            # Ejecutar el incremento o disminucion si existe
+
             if ctx.for_incremento_y_disminucion():
                 self.visit(ctx.for_incremento_y_disminucion())
-        
-        self.pop_scope()  # Salir del ámbito del for
+
+        self.pop_scope()
         return None
 
     # Visit a parse tree produced by GramaticaParser#for_incremento_y_disminucion.
@@ -155,19 +161,26 @@ class AnalizadorVisitor(GramaticaVisitor):  #hereda directamente del Visitor ori
             return self.visit(ctx.declaracion_y_asignacion())
         else:
             var_name = ctx.VARIABLE().getText()
-            current = self.current_scope().get(var_name, 0)
+            #se busca el valor actual de la variable en el ámbito correspondiente
+            current = None
+            for scope in reversed(self.variables):
+                if var_name in scope:
+                    current = scope[var_name]
+                    break
+            if current is None:
+                current = 0
             if ctx.MASMAS():
-                self.current_scope()[var_name] = current + 1
+                new_value = current + 1
             else:
-                self.current_scope()[var_name] = current - 1
+                new_value = current - 1
+            #actualiza la variable usando el método auxiliar
+            self.set_variable(var_name, new_value)
             return None
 
     # Visit a parse tree produced by GramaticaParser#sentencia_return.
     def visitSentencia_return(self, ctx:GramaticaParser.Sentencia_returnContext):
         result = self.visit(ctx.expr())
         raise ReturnValue(result)  # Ya no necesita conversión aquí
-
-
 
     # Visit a parse tree produced by GramaticaParser#funcion.
     def visitFuncion(self, ctx:GramaticaParser.FuncionContext):
@@ -203,16 +216,16 @@ class AnalizadorVisitor(GramaticaVisitor):  #hereda directamente del Visitor ori
         
         self.push_scope()
         
-        # Asigna los parámetros en una funcion
+        #asigna los parámetros en una función
         for (param_type, param_name), arg_val in zip(func['params'], args):
             self.current_scope()[param_name] = arg_val
         
         result = None
         try:
-            # Ejecutar todas las instrucciones de la función
+            #ejecuta todas las instrucciones de la función
             for inst in func['body'].instruccion():
                 self.visit(inst)
-            # En caso de que la función tenga un return fuera del bloque de instrucciones
+            #en caso de que la función tenga un return fuera del bloque de instrucciones
             if func['body'].sentencia_return():
                 self.visit(func['body'].sentencia_return())
         except ReturnValue as rv:
@@ -264,7 +277,11 @@ class AnalizadorVisitor(GramaticaVisitor):  #hereda directamente del Visitor ori
             return self.visit(ctx.llamada_funcion())
         elif ctx.VARIABLE():
             var_name = ctx.VARIABLE().getText()
-            #print(f"Buscando variable: {var_name}, Variables actuales: {self.variables}")  # Debug
+            #si el texto es "true" o "false", devolver el literal booleano
+            if var_name.lower() == "true":
+                return True
+            elif var_name.lower() == "false":
+                return False
             for scope in reversed(self.variables):
                 if var_name in scope:
                     return scope[var_name]
@@ -273,17 +290,15 @@ class AnalizadorVisitor(GramaticaVisitor):  #hereda directamente del Visitor ori
             num_str = ctx.NUMERO().getText()
             return float(num_str) if '.' in num_str else int(num_str)
         elif ctx.CADENA():
-            return ctx.CADENA().getText()[1:-1]  # Eliminar comillas
+            return ctx.CADENA().getText()[1:-1]  #elimina las comillas
         elif ctx.BOOLEANO():
-            valor = ctx.BOOLEANO().getText().lower()  # Convertir a minúsculas para evitar problemas con mayúsculas
-            #print(f"Valor booleano detectado: {valor}")  # Debug
+            valor = ctx.BOOLEANO().getText().lower()
             if valor == 'true':
                 return True
             elif valor == 'false':
                 return False
             else:
                 raise Exception(f"Valor booleano no reconocido: {valor}")
-
         elif ctx.PARENTESIS_APERTURA():
             return self.visit(ctx.expr(0))
         else:

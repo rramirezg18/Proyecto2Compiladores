@@ -22,8 +22,7 @@ class GeneradorCodigo(GramaticaVisitor):
             'int': ir.IntType(32),
             'float': ir.DoubleType(),
             'boolean': ir.IntType(1),
-            'string': ir.IntType(8).as_pointer(),
-            'void': ir.VoidType()
+            'string': ir.IntType(8).as_pointer()
         }
 
     def declarar_funciones_builtin(self):
@@ -32,17 +31,16 @@ class GeneradorCodigo(GramaticaVisitor):
         printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
         ir.Function(self.module, printf_ty, name="printf")
 
-    # --- Métodos principales ---
-
+    #Métodos principales
     def visitGramatica(self, ctx: GramaticaParser.GramaticaContext):
-        # 1. Registrar prototipos de funciones para todas las funciones definidas
+        #Registrar prototipos de funciones para todas las funciones definidas
         for funcion in ctx.funcion():
             self.registrar_prototipo_funcion(funcion)
         
-        # 2. Procesar el bloque main
+        #Procesar el bloque main
         self.visit(ctx.main())
         
-        # 3. Procesar el cuerpo de cada función
+        #Procesar el cuerpo de cada función
         for funcion in ctx.funcion():
             self.visit(funcion)
         
@@ -55,63 +53,56 @@ class GeneradorCodigo(GramaticaVisitor):
         param_types = [self.type_map[t] for t, _ in func_info['parametros']]
         func_type = ir.FunctionType(ret_type, param_types)
         
-        # Crear el prototipo en el módulo LLVM y registrar en self.funciones
+        #prototipo en el módulo LLVM y registrar en self.funciones
         function = ir.Function(self.module, func_type, name=func_name)
         self.funciones[func_name] = function
 
 
-
-
-
-
-
-
     def visitMain(self, ctx: GramaticaParser.MainContext):
-        # Crear función main en LLVM
+        #función main en LLVM
         main_type = ir.FunctionType(ir.IntType(32), [])
         main_func = ir.Function(self.module, main_type, name="main")
         self.funciones['main'] = main_func
         
-        # Crear bloque de entrada
+        #creabloque de entrada
         block = main_func.append_basic_block(name="entry")
         self.builder = ir.IRBuilder(block)
         
-        # Procesar instrucciones del main
+        #procesa instrucciones del main
         for instr in ctx.instruccion():
             self.visit(instr)
         
-        # Añadir retorno por defecto
+        #retorno por defecto
         if not self.builder.block.is_terminated:
             self.builder.ret(ir.Constant(ir.IntType(32), 0))
 
-    # --- Variables y asignaciones ---
+    #Variables y asignaciones
     def visitDeclaracion_y_asignacion(self, ctx: GramaticaParser.Declaracion_y_asignacionContext):
         var_name = ctx.VARIABLE().getText()
         val, val_type = self.visit(ctx.expr())
         
-        # Obtener el tipo: si se especifica en la declaración se usa ese,
-        # de lo contrario se obtiene del entorno local (si ya fue declarado)
+        # obtiene el tipo de dato, si es declaracion se usa el que trae por defecto
         if ctx.tipo():
             declared_type = ctx.tipo().getText()
         else:
             if var_name in self.locals:
-                # Se obtiene el tipo que ya se registró en self.locals
+                #se obtiene el tipo que ya se registró en self.locals
                 declared_type = self.locals[var_name][1]
             else:
                 declared_type = self.ts.consultar_variable(var_name)
         
         llvm_type = self.type_map[declared_type]
         
-        # Si la variable no existe en el entorno local, se reserva espacio
+        #se reserva espacio por si la variable no existe en un entorno local
         if var_name not in self.locals:
             alloc = self.builder.alloca(llvm_type, name=var_name)
             self.locals[var_name] = (alloc, declared_type)
         
-        # Conversión de tipos si es necesario
+        #conversión de tipos si es necesario
         if declared_type == 'float' and val_type == 'int':
             val = self.builder.sitofp(val, llvm_type)
         
-        # Almacenar el valor en la variable
+        #almacenar el valor en la variable
         self.builder.store(val, self.locals[var_name][0])
         return (val, declared_type)
 
@@ -119,7 +110,7 @@ class GeneradorCodigo(GramaticaVisitor):
 
 
     def visitSentencia_print(self, ctx: GramaticaParser.Sentencia_printContext):
-        # Evaluar la expresión que se quiere imprimir
+        #evaluar la expresión que se quiere imprimir
         value, value_type = self.visit(ctx.expr())
 
         # Según el tipo de la expresión, definir el formato de impresión
@@ -130,11 +121,11 @@ class GeneradorCodigo(GramaticaVisitor):
         elif value_type == 'string':
             fmt = "%s\n\0"
         elif value_type == 'boolean':
-            fmt = "%d\n\0"  # Imprime 1 o 0 (puedes convertirlo a "true"/"false" si lo prefieres)
+            fmt = "%d\n\0"  #muestra 1 para true y 0 para false
         else:
             raise Exception(f"print no soporta tipo {value_type}")
 
-        # Crear una variable global para la cadena de formato
+        #crear una variable global para la cadena de formato
         fmt_name = "fmt_" + value_type
         if fmt_name in self.module.globals:
             fmt_global = self.module.globals[fmt_name]
@@ -150,70 +141,59 @@ class GeneradorCodigo(GramaticaVisitor):
                 ir.ArrayType(ir.IntType(8), len(fmt)),
                 bytearray(fmt.encode("utf8"))
             )
-        # Obtener un puntero a la cadena de formato
+        #obtener un puntero a la cadena de formato
         fmt_ptr = self.builder.bitcast(fmt_global, ir.IntType(8).as_pointer())
 
-        # Invocar a printf con la cadena de formato y el valor
+        #invocar a printf con la cadena de formato y el valor
         self.builder.call(self.module.globals["printf"], [fmt_ptr, value])
-
-
-
-
-
-    
-
-
-
-
-
 
 
     def visitSentencia_for(self, ctx: GramaticaParser.Sentencia_forContext):
         func = self.builder.function
 
-        # 1. Ejecutar la inicialización: declaracion_y_asignacion
+        #ejecuta la inicialización: declaracion_y_asignacion
         self.visit(ctx.declaracion_y_asignacion())
 
-        # 2. Crear bloques para la condición, cuerpo, incremento y salida
+        #crear bloques para la condición, cuerpo, incremento y salida
         cond_bb = func.append_basic_block(name="for.cond")
         body_bb = func.append_basic_block(name="for.body")
         inc_bb = func.append_basic_block(name="for.inc")
         exit_bb = func.append_basic_block(name="for.exit")
 
-        # Saltar al bloque de condición
+        #se pasa  al bloque de condición
         self.builder.branch(cond_bb)
 
-        # Bloque de condición
+        #bloque de condición
         self.builder.position_at_start(cond_bb)
         cond_val, _ = self.visit(ctx.expr())
         self.builder.cbranch(cond_val, body_bb, exit_bb)
 
-        # Bloque del cuerpo del for
+        #bloque del cuerpo del for
         self.builder.position_at_start(body_bb)
         self.visit(ctx.bloque())
         self.builder.branch(inc_bb)
 
-        # Bloque de incremento
+        #bloque de incremento
         self.builder.position_at_start(inc_bb)
         self.visit(ctx.for_incremento_y_disminucion())
         self.builder.branch(cond_bb)
 
-        # Bloque de salida: se posiciona al final del for
+        #bloque de salida se posiciona al final del for
         self.builder.position_at_start(exit_bb)
         return None
 
 
     def visitFor_incremento_y_disminucion(self, ctx: GramaticaParser.For_incremento_y_disminucionContext):
-        # Si es post-incremento o decremento: i++ o i--
+        #si es post-incremento o decremento: i++ o i--
         if ctx.MASMAS() or ctx.MENOSMENOS():
             var_name = ctx.VARIABLE().getText()
-            # Obtener la dirección y tipo de la variable
+            #obtener la dirección y tipo de la variable
             if var_name not in self.locals:
                 raise Exception(f"Variable '{var_name}' no declarada en incremento")
             alloc, var_type = self.locals[var_name]
             current_val = self.builder.load(alloc, name=var_name)
             if ctx.MASMAS():
-                # Incremento
+                #incremento
                 if var_type == 'int':
                     one = ir.Constant(ir.IntType(32), 1)
                     new_val = self.builder.add(current_val, one, name=var_name+"_inc")
@@ -223,7 +203,7 @@ class GeneradorCodigo(GramaticaVisitor):
                 else:
                     raise Exception(f"Tipo no soportado para incremento: {var_type}")
             else:
-                # Decremento
+                #disminucion
                 if var_type == 'int':
                     one = ir.Constant(ir.IntType(32), 1)
                     new_val = self.builder.sub(current_val, one, name=var_name+"_dec")
@@ -234,7 +214,7 @@ class GeneradorCodigo(GramaticaVisitor):
                     raise Exception(f"Tipo no soportado para decremento: {var_type}")
             self.builder.store(new_val, alloc)
         else:
-            # Si se trata de una reasignación (por ejemplo, i = i + 2)
+            #si es una reasignación i = i + 2
             self.visit(ctx.declaracion_y_asignacion())
         return None
 
@@ -243,7 +223,7 @@ class GeneradorCodigo(GramaticaVisitor):
         #print(f"\nProcesando expresión: {ctx.getText()}")
         #print(f"Tipo de contexto: {type(ctx).__name__}")
         
-        # Expresiones simples (1 elemento)
+        #Expresiones simples 1 elemento
         if ctx.getChildCount() == 1:
             if ctx.llamada_funcion():
                 return self.visit(ctx.llamada_funcion())
@@ -304,20 +284,20 @@ class GeneradorCodigo(GramaticaVisitor):
                         #print(f"Error al buscar variable: {str(e)}")
                         raise Exception(f"Variable '{token}' no declarada")
         
-        # Primero, verificar si es una expresión entre paréntesis
+        #primero verifica si es una expresión entre paréntesis
         if (ctx.getChildCount() == 3 and 
             ctx.getChild(0).getText() == '(' and 
             ctx.getChild(2).getText() == ')'):
             return self.visit(ctx.expr(0))
         
-        # Operaciones binarias
+        #operaciones binarias
         elif ctx.getChildCount() == 3:
-            # Procesar operandos
+            #procesa los operandos
             left, left_type = self.visit(ctx.expr(0))
             right, right_type = self.visit(ctx.expr(1))
             op = ctx.getChild(1).getText()
             
-            # Conversión de tipos si es necesario
+            #conversión de tipos si es necesario
             if left_type == 'int' and right_type == 'float':
                 left = self.builder.sitofp(left, ir.DoubleType())
                 left_type = 'float'
@@ -325,7 +305,7 @@ class GeneradorCodigo(GramaticaVisitor):
                 right = self.builder.sitofp(right, ir.DoubleType())
                 right_type = 'float'
             
-            # Operaciones aritméticas
+            #operaciones aritméticas
             if op in ['+', '-', '*', '/', '%']:
                 if left_type == 'int':
                     if op == '+': val = self.builder.add(left, right)
@@ -342,9 +322,9 @@ class GeneradorCodigo(GramaticaVisitor):
                     elif op == '%': raise Exception("El operador % no está definido para floats")
                     return (val, 'float')
             
-            # Agregar manejo para la potenciación (^)
+            #agregar manejo para la potencia
             elif op == '^':
-                # Convertir operandos a float si son enteros
+                #convertir operandos a float si son enteros
                 if left_type == 'int':
                     left = self.builder.sitofp(left, ir.DoubleType())
                     left_type = 'float'
@@ -352,7 +332,7 @@ class GeneradorCodigo(GramaticaVisitor):
                     right = self.builder.sitofp(right, ir.DoubleType())
                     right_type = 'float'
                 
-                # Buscar o declarar la función intrínseca para la potencia
+                #cuscar o declarar la función intrínseca para la potencia
                 pow_func = self.module.globals.get("llvm.pow.f64")
                 if not pow_func:
                     pow_func_ty = ir.FunctionType(ir.DoubleType(), [ir.DoubleType(), ir.DoubleType()])
@@ -361,7 +341,7 @@ class GeneradorCodigo(GramaticaVisitor):
                 result = self.builder.call(pow_func, [left, right])
                 return (result, 'float')
             
-            # Operaciones de comparación
+            #operaciones de comparación
             elif op in ['<', '>', '<=', '>=', '==', '!=']:
                 if left_type == 'int':
                     cmp = self.builder.icmp_signed(op, left, right)
@@ -369,7 +349,7 @@ class GeneradorCodigo(GramaticaVisitor):
                     cmp = self.builder.fcmp_ordered(op, left, right)
                 return (cmp, 'boolean')
         
-        # Operador unario (negativo)
+        #operador negativo
         elif (ctx.getChildCount() == 2 and 
             ctx.getChild(0).getText() == '-'):
             val, val_type = self.visit(ctx.expr(0))
@@ -385,12 +365,7 @@ class GeneradorCodigo(GramaticaVisitor):
         return (None, 'void')
 
 
-
-
-
-    
-
-    # --- Llamadas a función ---
+    #llamadas de funciones
     def visitLlamada_funcion(self, ctx: GramaticaParser.Llamada_funcionContext):
         func_name = ctx.VARIABLE().getText()
         func = self.funciones.get(func_name)
@@ -398,44 +373,53 @@ class GeneradorCodigo(GramaticaVisitor):
         if not func:
             raise Exception(f"Función '{func_name}' no definida")
         
+        #obtener información de la función para conocer los tipos de los parámetros
+        func_info = self.ts.consultar_funcion(func_name)
+        parametros = func_info['parametros']  # Lista de tipo, nombre
+        
         args = []
         if ctx.argumentos():
-            for expr in ctx.argumentos().expr():
-                val, _ = self.visit(expr)
-                args.append(val)
+            for i, expr in enumerate(ctx.argumentos().expr()):
+                arg_val, arg_type = self.visit(expr)
+                expected_type = parametros[i][0]
+                #si el parámetro es float y se pasó un entero, se convierte
+                if expected_type == 'float' and arg_type == 'int':
+                    arg_val = self.builder.sitofp(arg_val, ir.DoubleType())
+                args.append(arg_val)
         
         call = self.builder.call(func, args)
-        return (call, self.ts.consultar_funcion(func_name)['tipo_retorno'])
+        return (call, func_info['tipo_retorno'])
 
 
-    # --- Funciones ---
+
+    #funciones
     def visitFuncion(self, ctx: GramaticaParser.FuncionContext):
         func_name = ctx.VARIABLE().getText()
-        # Recupera la función (ya registrada en la primera pasada)
+        #recupera la función ya registrada en la primera pasada
         function = self.funciones.get(func_name)
         if not function:
             raise Exception(f"Función '{func_name}' no definida")
         
-        # Obtener información de la función
+        #obtiene los datos de la función
         func_info = self.ts.consultar_funcion(func_name)
         self.current_func_info = func_info  # Guardar info para usar en el return
         
-        # Crear el bloque de entrada para la función
+        #crea un bloque de entrada para la función
         entry_block = function.append_basic_block(name="entry")
         self.builder = ir.IRBuilder(entry_block)
         self.locals = {}
         
-        # Asignar parámetros a variables locales
+        #parámetros a variables locales
         for i, (_, param_name) in enumerate(func_info['parametros']):
             alloc = self.builder.alloca(function.args[i].type, name=param_name)
             self.builder.store(function.args[i], alloc)
             self.locals[param_name] = (alloc, func_info['parametros'][i][0])
         
-        # Generar el cuerpo de la función
+        #generar el cuerpo de la función
         for instr in ctx.instruccion():
             self.visit(instr)
         
-        # Si la función no terminó con un return, se añade uno por defecto:
+        #se agrega si la funcion no termina con return
         if not self.builder.block.is_terminated:
             if func_info['tipo_retorno'] == 'void':
                 self.builder.ret_void()
@@ -446,7 +430,7 @@ class GeneradorCodigo(GramaticaVisitor):
 
 
 
-    # --- Estructuras de control ---
+    #estructuras de control
     def visitSentencia_if(self, ctx: GramaticaParser.Sentencia_ifContext):
         cond, _ = self.visit(ctx.expr(0))
         func = self.builder.function
@@ -457,13 +441,13 @@ class GeneradorCodigo(GramaticaVisitor):
         
         self.builder.cbranch(cond, then_bb, else_bb)
         
-        # Bloque then
+        #bloque then
         self.builder.position_at_start(then_bb)
         self.visit(ctx.bloque(0))
         if not self.builder.block.is_terminated:
             self.builder.branch(merge_bb)
         
-        # Bloque else
+        #bloque else
         self.builder.position_at_start(else_bb)
         if ctx.ELSE():
             self.visit(ctx.bloque(1))
@@ -482,27 +466,22 @@ class GeneradorCodigo(GramaticaVisitor):
         
         self.builder.branch(cond_bb)
         
-        # Bloque condición
+        #bloque condición
         self.builder.position_at_start(cond_bb)
         cond, _ = self.visit(ctx.expr())
         self.builder.cbranch(cond, body_bb, end_bb)
-        
-        # Bloque cuerpo
+
         self.builder.position_at_start(body_bb)
         self.visit(ctx.bloque())
         self.builder.branch(cond_bb)
-        
-        # Bloque fin
-        self.builder.position_at_start(end_bb)
-        return None  # Este return está correctamente indentado
     
-
-
+        self.builder.position_at_start(end_bb)
+        return None  
+    
     def visitSentencia_return(self, ctx: GramaticaParser.Sentencia_returnContext):
         ret_expr, ret_type = self.visit(ctx.expr())
-        # Supongamos que guardaste la información de la función actual en self.current_func_info
         expected = self.current_func_info['tipo_retorno']
-        # Si la función debe retornar int pero la expresión es float, convertir:
+        #si la función debe retornar int pero la expresión es float se hace la conversion
         if expected == 'int' and ret_type == 'float':
             ret_expr = self.builder.fptosi(ret_expr, ir.IntType(32))
         self.builder.ret(ret_expr)

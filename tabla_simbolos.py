@@ -6,7 +6,7 @@ class TablaSimbolos:
         self.funciones = {}    # Diccionario de funciones
         self.current_return_type = None
 
-    #Manejo de entornos
+    #manejo de entornos
     def push_env(self):
         self.entornos.append({})
 

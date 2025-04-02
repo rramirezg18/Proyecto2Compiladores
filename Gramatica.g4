@@ -1,10 +1,10 @@
 /*
 ESTRUCTURA DEL LENGUAGEJE
 programx{
-    main(){ -->funcion principal
+    main(){ --funcion principal
         bloque deinstrucciones
     }
-    tipo funcion(parametros o no){ --> demas funciones
+    tipo funcion(parametros o no){ -- demas funciones
         bloque instrucciones
     }
 }

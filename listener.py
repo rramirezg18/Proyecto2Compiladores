@@ -12,9 +12,9 @@ class AnalizadorSemantico(GramaticaListener):
 
 
     def enterGramatica(self, ctx: GramaticaParser.GramaticaContext):
-        #print("Iniciando registro de funciones...")  # Debug
+        #print("Iniciando registro de funciones...")
         for func_ctx in ctx.funcion():
-            nombre = func_ctx.VARIABLE().getText()  # Asegurar que el nombre sea un string
+            nombre = func_ctx.VARIABLE().getText()  #si nombre sea un string
             tipo_retorno = func_ctx.tipo().getText() if func_ctx.tipo() else "void"
             parametros = []
             
@@ -35,7 +35,7 @@ class AnalizadorSemantico(GramaticaListener):
     def enterMain(self, ctx: GramaticaParser.MainContext):
         #print("Creando ámbito para main")  
         self.ts.push_env()
-        # Registrar parámetros de main (aunque no debería tener)
+        #registrar parámetros de main 
         #if ctx.parametros():
             #for tipo, var in zip(ctx.parametros().tipo(), ctx.parametros().VARIABLE()):
                 #self.ts.agregar_variable(var.getText(), tipo.getText())
@@ -52,13 +52,17 @@ class AnalizadorSemantico(GramaticaListener):
 
     def exitDeclaracion_y_asignacion(self, ctx: GramaticaParser.Declaracion_y_asignacionContext):
         var_name = ctx.VARIABLE().getText()
-        if ctx.tipo():  # Declaración con tipo de dato
-            tipo = ctx.tipo().getText()
-            #print(f"Registrando variable: {var_name} como {tipo}")  # Debug
-            self.ts.agregar_variable(var_name, tipo)
-        else:  # Re-asignación de variables
+        expr_tipo = self.inferir_tipo_expr(ctx.expr())
+        if ctx.tipo():  #declaración con tipo de dato
+            tipo_decl = ctx.tipo().getText()
+            #verificar que el tipo de la expresión sea compatible con el declarado
+            if not self.ts.tipos_compatibles(tipo_decl, expr_tipo):
+                raise Exception(f"Error semántico: No se puede asignar un valor de tipo '{expr_tipo}' a la variable '{var_name}' de tipo '{tipo_decl}'")
+            self.ts.agregar_variable(var_name, tipo_decl)
+        else:  #reasignación de variables
             if not self.ts.existe_variable(var_name):
                 raise Exception(f"Variable '{var_name}' no declarada")
+
 
     #valida las expresiones
     def exitExpr(self, ctx: GramaticaParser.ExprContext):
@@ -88,7 +92,7 @@ class AnalizadorSemantico(GramaticaListener):
                 return self.ts.consultar_variable(token)
         else:
             # Para expresiones compuestas usar un metodo helper para encotrar el tipo.
-            return self._compute_expr_type(expr_ctx)
+            return self.tipo_expresiones(expr_ctx)
 
 
     def validar_llamada_funcion(self, llamada_ctx):
@@ -134,7 +138,7 @@ class AnalizadorSemantico(GramaticaListener):
 
 
 
-    def _compute_expr_type(self, ctx):
+    def tipo_expresiones(self, ctx):
         #hoja con un solo hijo (literal o variable)
         if ctx.getChildCount() == 1:
             token = ctx.getText()
@@ -150,11 +154,11 @@ class AnalizadorSemantico(GramaticaListener):
                 return self.ts.consultar_variable(token)
         #expresión entre paréntesis
         if ctx.getChildCount() == 3 and ctx.getChild(0).getText() == '(':
-            return self._compute_expr_type(ctx.expr(0))
+            return self.tipo_expresiones(ctx.expr(0))
         #operación binaria
         if ctx.getChildCount() == 3:
-            left_type = self._compute_expr_type(ctx.expr(0))
-            right_type = self._compute_expr_type(ctx.expr(1))
+            left_type = self.tipo_expresiones(ctx.expr(0))
+            right_type = self.tipo_expresiones(ctx.expr(1))
             op = ctx.getChild(1).getText()
             if op in ['+', '-', '*', '/', '%']:
                 #si no es float, explicitamente sea int
@@ -169,6 +173,6 @@ class AnalizadorSemantico(GramaticaListener):
                 return 'boolean'
         #operador negativo
         if ctx.getChildCount() == 2 and ctx.getChild(0).getText() == '-':
-            return self._compute_expr_type(ctx.expr(0))
+            return self.tipo_expresiones(ctx.expr(0))
         return 'void'
 
