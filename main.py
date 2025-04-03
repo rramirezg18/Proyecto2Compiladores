@@ -49,7 +49,7 @@ def main():
     #valida las operaciones y las muestra en pantalla antes de mostrar el mensaje de compilacion finalizada
     Analizador = AnalizadorVisitor()
     try:
-        Analizador.visit(tree)  # Esto ejecutará los prints y mostrará los valores
+        Analizador.visit(tree)  #ejecutará los prints y mostrará los valores
     except Exception as e:
         print(f"Error durante evaluación:\n{e}")
         return

@@ -6,9 +6,9 @@ programx{
         print(y);
         
         if(x > 5){
-            print("x is greater than 5");
+            print("x es mayor que 5");
         } else {
-            print("x is less or equal to 5");
+            print("x es menor o igual que 5");
         }
         
         while(x > 0){
@@ -20,8 +20,7 @@ programx{
             print(i);
         }
         
-        float result = celsiusAFahrenheit(0);
-        print(result);
+        contarHasta(5);
 
         print(potencia(2, 3));
 
@@ -43,11 +42,6 @@ programx{
 
 
     }
-    
-    float celsiusAFahrenheit(float c){
-        float f = (c * 9 / 5) + 32;
-        return f;
-    }
 
     int potencia(int base, int exponente) {
         return base ^ exponente;
@@ -66,6 +60,14 @@ programx{
             contador = contador + 1;//imprime 10 como resultado
         }
         return suma;
+    }
+
+    int contarHasta(int n) {
+        int i = 0;
+        for (i = 1; i <= n; i++) {
+            print(i);
+        }
+        return 0;
     }
 
 
