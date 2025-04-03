@@ -83,8 +83,9 @@ for.body:
   br label %"for.inc"
 for.inc:
   %"i.3" = load i32, i32* %"i"
-  %"i_inc" = add i32 %"i.3", 1
-  store i32 %"i_inc", i32* %"i"
+  %"i.4" = load i32, i32* %"i"
+  %".12" = add i32 %"i.4", 1
+  store i32 %".12", i32* %"i"
   br label %"for.cond"
 for.exit:
   ret i32 0
@@ -104,15 +105,15 @@ entry:
   %".6" = bitcast [4 x i8]* @"fmt_float" to i8*
   %".7" = call i32 (i8*, ...) @"printf"(i8* %".6", double %"y.1")
   %"x.2" = load i32, i32* %"x"
-  %".8" = icmp sgt i32 %"x.2", 5
+  %".8" = icmp sgt i32 %"x.2", 15
   br i1 %".8", label %"then", label %"else"
 then:
-  %".10" = bitcast [17 x i8]* @"str.5694196220069573191" to i8*
+  %".10" = bitcast [7 x i8]* @"str.3994404365163265527" to i8*
   %".11" = bitcast [4 x i8]* @"fmt_string" to i8*
   %".12" = call i32 (i8*, ...) @"printf"(i8* %".11", i8* %".10")
   br label %"ifcont"
 else:
-  %".14" = bitcast [25 x i8]* @"str.-557817373700032577" to i8*
+  %".14" = bitcast [11 x i8]* @"str.-7614002029290330855" to i8*
   %".15" = bitcast [4 x i8]* @"fmt_string" to i8*
   %".16" = call i32 (i8*, ...) @"printf"(i8* %".15", i8* %".14")
   br label %"ifcont"
@@ -145,81 +146,90 @@ for.body:
   br label %"for.inc"
 for.inc:
   %"i.3" = load i32, i32* %"i"
-  %"i_inc" = add i32 %"i.3", 1
-  store i32 %"i_inc", i32* %"i"
+  %"i.4" = load i32, i32* %"i"
+  %".33" = add i32 %"i.4", 1
+  store i32 %".33", i32* %"i"
   br label %"for.cond"
 for.exit:
-  %".35" = call i32 @"contarHasta"(i32 5)
-  %".36" = call i32 @"potencia"(i32 2, i32 3)
-  %".37" = bitcast [4 x i8]* @"fmt_int" to i8*
-  %".38" = call i32 (i8*, ...) @"printf"(i8* %".37", i32 %".36")
-  %".39" = call i32 @"sumar"(i32 5, i32 7)
-  %".40" = bitcast [4 x i8]* @"fmt_int" to i8*
-  %".41" = call i32 (i8*, ...) @"printf"(i8* %".40", i32 %".39")
-  %".42" = call i32 @"sumaHasta"(i32 5)
+  %".36" = call i32 @"contarHasta"(i32 5)
+  %".37" = call i32 @"potencia"(i32 2, i32 3)
+  %".38" = bitcast [4 x i8]* @"fmt_int" to i8*
+  %".39" = call i32 (i8*, ...) @"printf"(i8* %".38", i32 %".37")
+  %".40" = call i32 @"sumar"(i32 5, i32 7)
+  %".41" = bitcast [4 x i8]* @"fmt_int" to i8*
+  %".42" = call i32 (i8*, ...) @"printf"(i8* %".41", i32 %".40")
   %"resultado" = alloca i32
-  store i32 %".42", i32* %"resultado"
+  %".43" = call i32 @"sumaHasta"(i32 5)
+  store i32 %".43", i32* %"resultado"
   %"resultado.1" = load i32, i32* %"resultado"
-  %".44" = bitcast [4 x i8]* @"fmt_int" to i8*
-  %".45" = call i32 (i8*, ...) @"printf"(i8* %".44", i32 %"resultado.1")
-  %".46" = mul i32 2, 5
-  %".47" = bitcast [4 x i8]* @"fmt_int" to i8*
-  %".48" = call i32 (i8*, ...) @"printf"(i8* %".47", i32 %".46")
+  %".45" = bitcast [4 x i8]* @"fmt_int" to i8*
+  %".46" = call i32 (i8*, ...) @"printf"(i8* %".45", i32 %"resultado.1")
+  %".47" = mul i32 2, 5
+  %".48" = bitcast [4 x i8]* @"fmt_int" to i8*
+  %".49" = call i32 (i8*, ...) @"printf"(i8* %".48", i32 %".47")
   %"x.6" = load i32, i32* %"x"
-  %".49" = mul i32 %"x.6", 4
-  %".50" = add i32 2, %".49"
-  %".51" = bitcast [4 x i8]* @"fmt_int" to i8*
-  %".52" = call i32 (i8*, ...) @"printf"(i8* %".51", i32 %".50")
-  %".53" = add i32 2, 3
-  %".54" = mul i32 %".53", 4
-  %".55" = bitcast [4 x i8]* @"fmt_int" to i8*
-  %".56" = call i32 (i8*, ...) @"printf"(i8* %".55", i32 %".54")
-  %".57" = sdiv i32 10, 2
-  %".58" = bitcast [4 x i8]* @"fmt_int" to i8*
-  %".59" = call i32 (i8*, ...) @"printf"(i8* %".58", i32 %".57")
-  %".60" = sitofp i32 2 to double
-  %".61" = sitofp i32 3 to double
-  %".62" = call double @"llvm.pow.f64"(double %".60", double %".61")
-  %".63" = bitcast [4 x i8]* @"fmt_float" to i8*
-  %".64" = call i32 (i8*, ...) @"printf"(i8* %".63", double %".62")
-  %".65" = sitofp i32 3 to double
-  %".66" = sitofp i32 2 to double
-  %".67" = call double @"llvm.pow.f64"(double %".65", double %".66")
-  %".68" = sitofp i32 2 to double
-  %".69" = call double @"llvm.pow.f64"(double %".68", double %".67")
-  %".70" = bitcast [4 x i8]* @"fmt_float" to i8*
-  %".71" = call i32 (i8*, ...) @"printf"(i8* %".70", double %".69")
-  %".72" = mul i32 3, 2
-  %".73" = add i32 5, %".72"
-  %".74" = sdiv i32 4, 2
-  %".75" = sub i32 %".73", %".74"
-  %".76" = bitcast [4 x i8]* @"fmt_int" to i8*
-  %".77" = call i32 (i8*, ...) @"printf"(i8* %".76", i32 %".75")
-  %".78" = add i32 3, 4
-  %".79" = sitofp i32 2 to double
-  %".80" = sitofp i32 3 to double
-  %".81" = call double @"llvm.pow.f64"(double %".79", double %".80")
-  %".82" = sitofp i32 %".78" to double
-  %".83" = fmul double %".82", %".81"
-  %".84" = sdiv i32 10, 2
-  %".85" = sitofp i32 %".84" to double
-  %".86" = fsub double %".83", %".85"
-  %".87" = bitcast [4 x i8]* @"fmt_float" to i8*
-  %".88" = call i32 (i8*, ...) @"printf"(i8* %".87", double %".86")
-  %".89" = sdiv i32 5, 2
-  %".90" = bitcast [4 x i8]* @"fmt_int" to i8*
-  %".91" = call i32 (i8*, ...) @"printf"(i8* %".90", i32 %".89")
-  %".92" = sub i32 0, 2
-  %".93" = mul i32 4, %".92"
-  %".94" = add i32 2, %".93"
-  %".95" = bitcast [4 x i8]* @"fmt_int" to i8*
-  %".96" = call i32 (i8*, ...) @"printf"(i8* %".95", i32 %".94")
+  %".50" = mul i32 %"x.6", 4
+  %".51" = add i32 2, %".50"
+  %".52" = bitcast [4 x i8]* @"fmt_int" to i8*
+  %".53" = call i32 (i8*, ...) @"printf"(i8* %".52", i32 %".51")
+  %".54" = add i32 2, 3
+  %".55" = mul i32 %".54", 4
+  %".56" = bitcast [4 x i8]* @"fmt_int" to i8*
+  %".57" = call i32 (i8*, ...) @"printf"(i8* %".56", i32 %".55")
+  %".58" = sitofp i32 10 to double
+  %".59" = sitofp i32 2 to double
+  %".60" = fdiv double %".58", %".59"
+  %".61" = bitcast [4 x i8]* @"fmt_float" to i8*
+  %".62" = call i32 (i8*, ...) @"printf"(i8* %".61", double %".60")
+  %".63" = sitofp i32 2 to double
+  %".64" = sitofp i32 3 to double
+  %".65" = call double @"llvm.pow.f64"(double %".63", double %".64")
+  %".66" = bitcast [4 x i8]* @"fmt_float" to i8*
+  %".67" = call i32 (i8*, ...) @"printf"(i8* %".66", double %".65")
+  %".68" = sitofp i32 3 to double
+  %".69" = sitofp i32 2 to double
+  %".70" = call double @"llvm.pow.f64"(double %".68", double %".69")
+  %".71" = sitofp i32 2 to double
+  %".72" = call double @"llvm.pow.f64"(double %".71", double %".70")
+  %".73" = bitcast [4 x i8]* @"fmt_float" to i8*
+  %".74" = call i32 (i8*, ...) @"printf"(i8* %".73", double %".72")
+  %".75" = mul i32 3, 2
+  %".76" = add i32 5, %".75"
+  %".77" = sitofp i32 4 to double
+  %".78" = sitofp i32 2 to double
+  %".79" = fdiv double %".77", %".78"
+  %".80" = sitofp i32 %".76" to double
+  %".81" = fsub double %".80", %".79"
+  %".82" = bitcast [4 x i8]* @"fmt_float" to i8*
+  %".83" = call i32 (i8*, ...) @"printf"(i8* %".82", double %".81")
+  %".84" = add i32 3, 4
+  %".85" = sitofp i32 2 to double
+  %".86" = sitofp i32 3 to double
+  %".87" = call double @"llvm.pow.f64"(double %".85", double %".86")
+  %".88" = sitofp i32 %".84" to double
+  %".89" = fmul double %".88", %".87"
+  %".90" = sitofp i32 10 to double
+  %".91" = sitofp i32 2 to double
+  %".92" = fdiv double %".90", %".91"
+  %".93" = fsub double %".89", %".92"
+  %".94" = bitcast [4 x i8]* @"fmt_float" to i8*
+  %".95" = call i32 (i8*, ...) @"printf"(i8* %".94", double %".93")
+  %".96" = sitofp i32 5 to double
+  %".97" = sitofp i32 2 to double
+  %".98" = fdiv double %".96", %".97"
+  %".99" = bitcast [4 x i8]* @"fmt_float" to i8*
+  %".100" = call i32 (i8*, ...) @"printf"(i8* %".99", double %".98")
+  %".101" = sub i32 0, 2
+  %".102" = mul i32 4, %".101"
+  %".103" = add i32 2, %".102"
+  %".104" = bitcast [4 x i8]* @"fmt_int" to i8*
+  %".105" = call i32 (i8*, ...) @"printf"(i8* %".104", i32 %".103")
   ret i32 0
 }
 
 @"fmt_int" = internal constant [4 x i8] c"%d\0a\00"
 @"fmt_float" = internal constant [4 x i8] c"%f\0a\00"
-@"str.5694196220069573191" = internal constant [17 x i8] c"x es mayor que 5\00"
+@"str.3994404365163265527" = internal constant [7 x i8] c"x > 15\00"
 @"fmt_string" = internal constant [4 x i8] c"%s\0a\00"
-@"str.-557817373700032577" = internal constant [25 x i8] c"x es menor o igual que 5\00"
+@"str.-7614002029290330855" = internal constant [11 x i8] c"x es <= 15\00"
 declare double @"llvm.pow.f64"(double %".1", double %".2")

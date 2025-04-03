@@ -2,6 +2,6 @@ program {
     main() {
         int x = 5 + 5;
         print("se esta mostrando");
-        print(y);
+        print(x);
     }
 }

@@ -57,7 +57,7 @@ class AnalizadorSemantico(GramaticaListener):
             tipo_decl = ctx.tipo().getText()
             #verificar que el tipo de la expresión sea compatible con el declarado
             if not self.ts.tipos_compatibles(tipo_decl, expr_tipo):
-                raise Exception(f"Error semántico: No se puede asignar un valor de tipo '{expr_tipo}' a la variable '{var_name}' de tipo '{tipo_decl}'")
+                raise Exception(f"No se puede asignar un valor de tipo '{expr_tipo}' a la variable '{var_name}' de tipo '{tipo_decl}'")
             self.ts.agregar_variable(var_name, tipo_decl)
         else:  #reasignación de variables
             if not self.ts.existe_variable(var_name):
@@ -99,17 +99,17 @@ class AnalizadorSemantico(GramaticaListener):
         nombre = llamada_ctx.VARIABLE().getText()
 
         if not self.ts.existe_funcion(nombre):
-            raise Exception(f"Error semántico:\nFunción '{nombre}' no definida")
+            raise Exception(f"Función '{nombre}' no definida")
 
         func_info = self.ts.consultar_funcion(nombre)
         args = [self.inferir_tipo_expr(e) for e in llamada_ctx.argumentos().expr()] if llamada_ctx.argumentos() else []
 
         if len(args) != len(func_info['parametros']):
-            raise Exception(f"Error semántico:\nNúmero incorrecto de argumentos en llamada a '{nombre}'")
+            raise Exception(f"Número incorrecto de argumentos en llamada a '{nombre}'")
 
         for arg, (tipo_esperado, _) in zip(args, func_info['parametros']):
             if not self.ts.tipos_compatibles(tipo_esperado, arg):
-                raise Exception(f"Error semántico:\nTipo de argumento '{arg}' no compatible con '{tipo_esperado}'")
+                raise Exception(f"Tipo de argumento '{arg}' no compatible con '{tipo_esperado}'")
 
         return func_info['tipo_retorno']
 

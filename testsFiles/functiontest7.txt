@@ -1,0 +1,14 @@
+programx{
+    main(){
+        print(funcionB(5));
+    }
+    
+    int funcionA(int n){
+        return n * 2;
+    }
+    
+    int funcionB(int x){
+        int temp = funcionA(x);
+        return temp * 3;
+    }
+}
